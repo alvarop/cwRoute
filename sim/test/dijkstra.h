@@ -7,10 +7,8 @@
 #ifndef _NODES_H
 #define _NODES_H
 
-#include <stdint.h>
-
-#define MAX_NODES (5)
-#define MAX_LINKS (10)
+#define MAX_NODES (10)
+#define MAX_LINKS (30)
 #define MAX_DISTANCE 1e99
 
 // Use type definition since actual datatype might change
