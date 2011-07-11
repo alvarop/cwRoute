@@ -54,7 +54,7 @@ int32_t main( int argc, char *argv[] )
   // Display all connections
   print_all_links();
   
-  printf("\n Running dijkstra's algorithm.\n");
+  printf("\nRunning dijkstra's algorithm.\n");
   
   // Find least expensive route from (source) to AP    
   dijkstra( AP );
@@ -98,7 +98,7 @@ int32_t main( int argc, char *argv[] )
   // Display all connections
   print_all_links();
   
-  printf("\n Running dijkstra's algorithm.\n");
+  printf("\nRunning dijkstra's algorithm.\n");
   
   // Find least expensive route from (source) to AP    
   dijkstra( AP );
@@ -122,20 +122,21 @@ int32_t main( int argc, char *argv[] )
   add_labeled_node( Z, 0, "Z" );
 
   // S1->R, S1->AP, S2->R, S2->AP, R1->AP
-  add_link( S, T, 1 );
-  add_link( S, U, 4 );
-  add_link( T, Z, 5 );
-  add_link( T, Y, 7 );
+
+  add_link( U, S, 4 );
+  add_link( U, W, 3 );  
+  add_link( V, U, 3 );
+  add_link( V, W, 4 );  
+  add_link( X, V, 3 );
+  add_link( X, W, 6 );
+  add_link( T, S, 1 );
   add_link( T, V, 4 );
   add_link( T, U, 2 );
-  add_link( U, W, 3 );
-  add_link( U, V, 3 );
-  add_link( W, V, 4 );
-  add_link( W, X, 6 );
-  add_link( X, V, 3 );
-  add_link( X, Y, 6 );
+  add_link( Y, T, 7 );
   add_link( Y, V, 1 );
-  add_link( Y, Z, 12 );
+  add_link( Y, X, 6 );
+  add_link( Z, T, 5 );
+  add_link( Z, Y, 12 );
   
   
   printf("\nAdded links:\n");
@@ -143,18 +144,18 @@ int32_t main( int argc, char *argv[] )
   // Display all connections
   print_all_links();
   
-  printf("\n Running dijkstra's algorithm.\n");
+  printf("\nRunning dijkstra's algorithm.\n");
   
   // Find least expensive route from (source) to AP    
-  dijkstra( X );
+  dijkstra( Z );
 
   print_shortest_path( S );
   print_shortest_path( T );
   print_shortest_path( U );
   print_shortest_path( V );
   print_shortest_path( W );
+  print_shortest_path( X );
   print_shortest_path( Y );
-  print_shortest_path( Z );
 #endif
 
 

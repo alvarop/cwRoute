@@ -13,6 +13,9 @@
 static nodes_t nodes;
 static links_t links;
 
+node_t* find_node( uint8_t );
+node_t* node_with_smallest_distance( );
+
 energy_t difference( energy_t number_a, energy_t number_b )
 {
   if ( number_a > number_b )
@@ -101,23 +104,6 @@ node_t* find_node( uint8_t node_id )
 }
 
 //
-// Return 1 if all nodes are marked as visited
-//
-uint8_t all_nodes_visited()
-{
-  uint8_t nodes_visited = 1;
-  uint8_t node_index;
-  
-    
-  for( node_index = 0; node_index < nodes.current_nodes; node_index++ )
-  {
-    nodes_visited &= nodes.nodes[node_index].visited;
-  }  
-  
-  return nodes_visited;
-}
-
-//
 // Find the node with the smallest distance that has not been visited
 //
 node_t* node_with_smallest_distance( )
@@ -128,8 +114,10 @@ node_t* node_with_smallest_distance( )
   
   for( node_index = 0; node_index < nodes.current_nodes; node_index++ )
   {
+    //
     // If the current node has not been visited and has a smaller distance
     // than the current minimum, select it as the new minimum
+    //
     if ( ( nodes.nodes[node_index].distance < min_distance ) &&
          ( 0 == nodes.nodes[node_index].visited ) )
     {
@@ -138,7 +126,18 @@ node_t* node_with_smallest_distance( )
     }
   }  
   
-  return &nodes.nodes[best_node];
+  //
+  // If the minimum distance did not change, there were no more nodes available
+  //
+  if( min_distance == MAX_DISTANCE )
+  {
+    return NULL;
+  }
+  else
+  {
+    return &nodes.nodes[best_node];
+  }
+  
 }
 
 //
@@ -154,17 +153,23 @@ uint8_t dijkstra( uint8_t source_id )
   link_t* p_current_link;
   
   energy_t possible_distance;
+
 #ifdef DEBUG_ON
   printf("Initialize nodes.\n"); // DEBUG
 #endif
   
+  //
+  // Initialize nodes' distance to 'infinity' and sets self as 'previous node'
+  //
   for( node_index = 0; node_index < nodes.current_nodes; node_index++ )
   {
     nodes.nodes[node_index].distance = MAX_DISTANCE;
-    nodes.nodes[node_index].p_previous = &nodes.nodes[node_index]; // point to self
-  }
-  
+    nodes.nodes[node_index].p_previous = &nodes.nodes[node_index];
+  }  
+
+  //  
   // Get actual array index from node_id and re-use source_id variable
+  //
   p_source_node = find_node( source_id );
 
 #ifdef DEBUG_ON  
@@ -178,61 +183,71 @@ uint8_t dijkstra( uint8_t source_id )
     exit(1);
   }
   
+  //
   // Start with distance of 0, since it is the starting point
+  //
   p_source_node->distance = 0;
+  
+  p_source_node->visited = 0;
 
 #ifdef DEBUG_ON
   printf("Start main loop.\n"); // DEBUG
 #endif
 
-  while( !all_nodes_visited() )
+  p_source_node = node_with_smallest_distance();
+  
+  //
+  // Loop until all the (linked) nodes have been visited
+  //
+  while( NULL != p_source_node  )
   {
-    p_source_node = node_with_smallest_distance();
 
 #ifdef DEBUG_ON    
     print_node_name( p_source_node->id );
-    printf( " has current smallest distance.\n" ); // DEBUG
-#endif
+    printf( " has current smallest (non-visited) distance.\n" ); // DEBUG
+#endif            
     
-    if ( MAX_DISTANCE == p_source_node->distance )
-    {
-      // No more nodes are accessible
-#ifdef DEBUG_ON
-      printf("No more nodes are accessible!\n"); // DEBUG
-#endif
-      break;      
-    }
-  
+    //
+    // Mark node as already visited
+    //  
     p_source_node->visited = 1;
     
+    //
+    // Check for all links leaving this node
+    //
     for( link_index = 0; link_index < links.current_links; link_index++ )
     {
       p_destination_node = NULL;
       p_current_link = &links.links[link_index];
       
-      // If this link has the source node, use other node as destination
-      if( p_current_link->destination == p_source_node->id )
-      {
-        p_destination_node = find_node( p_current_link->source );
-      } 
-      else if( p_current_link->source == p_source_node->id )
+      //
+      // If this link has the current node as source, select destination node
+      //
+      if( p_current_link->source == p_source_node->id )
       {
         p_destination_node = find_node( p_current_link->destination );
       }
       
+      //
       // Make sure there is a destination, otherwise do nothing
+      //
       if ( NULL != p_destination_node )
       {
+      
 #ifdef DEBUG_ON
         printf("  Found link "); // DEBUG
         print_link( p_current_link ); // DEBUG
         printf("\n"); // DEBUG
-#endif      
+#endif  
+        //    
         // Compute the possible distance for destination if current link is used
+        //
         possible_distance = p_source_node->distance +
                               p_current_link->current_cost;
         
+        //
         // If possible distance is smaller than current one, update destination
+        //
         if ( possible_distance < p_destination_node->distance )
         {
 #ifdef DEBUG_ON
@@ -246,10 +261,14 @@ uint8_t dijkstra( uint8_t source_id )
         }
       }     
     }
-  
+    
+    //
+    // Find the next source node (returns NULL and exits loop if done)
+    //
+    p_source_node = node_with_smallest_distance();    
   } 
   
-  return 0;//hops?;
+  return 0;
 }
 
 //
@@ -262,14 +281,22 @@ void print_shortest_path( uint8_t node_id )
   
   p_node = find_node( node_id );
   
-  print_node_name( p_node->id );
-  while( p_node->p_previous != p_node )
+  if ( p_node->p_previous == p_node )
   {
-    p_node = p_node->p_previous;
-    printf("->");
-    print_node_name( p_node->id ); 
-  };
-  
+    printf("No path to node ");
+    print_node_name( p_node->id );
+  }
+  else
+  {
+    print_node_name( p_node->id );
+    while( p_node->p_previous != p_node )
+    {
+      p_node = p_node->p_previous;
+      printf("->");
+      print_node_name( p_node->id ); 
+    };  
+  }
+      
   printf("\n");
   
 }
@@ -362,7 +389,5 @@ void print_all_links()
   }
 
 }
-
-
 #endif
 

@@ -53,9 +53,6 @@ energy_t difference( energy_t, energy_t );
 
 uint8_t add_node( uint8_t, uint8_t );
 uint8_t add_link( uint8_t, uint8_t, energy_t );
-node_t* find_node( uint8_t );
-uint8_t all_nodes_visited();
-node_t* node_with_smallest_distance( );
 uint8_t dijkstra( uint8_t );
 void print_shortest_path( uint8_t );
 
