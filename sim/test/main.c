@@ -56,6 +56,13 @@ int32_t main( int argc, char *argv[] )
   
   printf("\nRunning dijkstra's algorithm.\n");
   
+  
+  // Initialize algorithm
+  initialize_node_energy( AP );
+
+
+  // Calculate link costs before running dijkstra's algorithm
+  calculate_link_costs(); 
   // Find least expensive route from (source) to AP    
   dijkstra( AP );
 

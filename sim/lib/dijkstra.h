@@ -18,6 +18,10 @@ typedef double energy_t ;
 typedef struct node_s node_t;
 typedef struct link_s link_t;
 
+
+//
+// TODO change source/destination to node_t pointers?
+//
 struct node_s
 {
   energy_t distance;    // Used by dijkstra's algorithm
@@ -40,6 +44,7 @@ struct link_s
 typedef struct
 {
   uint8_t current_nodes;
+  uint8_t current_relays;
   node_t nodes[MAX_NODES];
 } nodes_t;
 
@@ -53,6 +58,8 @@ energy_t difference( energy_t, energy_t );
 
 uint8_t add_node( uint8_t, uint8_t );
 uint8_t add_link( uint8_t, uint8_t, energy_t );
+void calculate_link_costs();
+energy_t initialize_node_energy( uint8_t source_id );
 uint8_t dijkstra( uint8_t );
 void print_shortest_path( uint8_t );
 

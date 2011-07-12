@@ -10,8 +10,10 @@
 #include <stdint.h>
 #include "dijkstra.h"
 
-static nodes_t nodes;
-static links_t links;
+static nodes_t s_nodes;
+static links_t s_links;
+
+static energy_t s_mean_energy;
 
 node_t* find_node( uint8_t );
 node_t* node_with_smallest_distance( );
@@ -34,15 +36,20 @@ energy_t difference( energy_t number_a, energy_t number_b )
 uint8_t add_node( uint8_t node_id, uint8_t is_relay )
 {
   node_t* new_node;
-  if( nodes.current_nodes < MAX_NODES )
+  if( s_nodes.current_nodes < MAX_NODES )
   {
-    new_node = &nodes.nodes[nodes.current_nodes];
+    new_node = &s_nodes.nodes[s_nodes.current_nodes];
     new_node->id = node_id;   
     new_node->energy = 0;
     new_node->visited = 0;
     new_node->is_relay = is_relay;
     
-    nodes.current_nodes++;   
+    s_nodes.current_nodes++;
+    
+    if( is_relay )
+    {
+      s_nodes.current_relays++;
+    }
     
     return 0;
   }
@@ -62,18 +69,17 @@ uint8_t add_link( uint8_t source, uint8_t destination, energy_t link_power )
   
   //TODO check if source and destination actually exist!
   
-  if( links.current_links < MAX_LINKS )
+  if( s_links.current_links < MAX_LINKS )
   {
-    new_link = &links.links[links.current_links];
+    new_link = &s_links.links[s_links.current_links];
     new_link->links_power = link_power; 
     new_link->source = source;
     new_link->destination = destination;
     
-    new_link->current_cost = link_power;  // Should be zero, but currently used
-                                          // for testing dijksta's algorithm
+    new_link->current_cost = 0;
     new_link->used = 0;
         
-    links.current_links++;   
+    s_links.current_links++;   
     
     return 0;
   }
@@ -85,6 +91,66 @@ uint8_t add_link( uint8_t source, uint8_t destination, energy_t link_power )
 }
 
 //
+// Initialize mean energy from direct links to AP
+//
+energy_t initialize_node_energy( uint8_t source_id )
+{  
+  node_t* p_node;
+  uint8_t link_index;
+  
+  for( link_index = 0; link_index < s_links.current_links; link_index++ )
+  {
+    if( s_links.links[link_index].source == source_id )
+    {
+      p_node = find_node( s_links.links[link_index].destination );
+
+#ifdef DEBUG_ON
+  print_node_name( p_node->id );
+#endif
+      if ( !p_node->is_relay )
+      {
+        p_node->energy = s_links.links[link_index].links_power;
+        s_mean_energy += p_node->energy;
+#ifdef DEBUG_ON
+  printf("(%f)", p_node->energy);
+#endif
+      }
+#ifdef DEBUG_ON
+  printf("\n");
+#endif
+    }
+  }  
+
+  // Compute actual mean (subtracting 1 to account for source)
+  s_mean_energy /= (s_nodes.current_nodes - 1 - s_nodes.current_relays);
+  
+#ifdef DEBUG_ON
+  printf("Mean Energy: %f\n", s_mean_energy);
+#endif
+  
+  return s_mean_energy;
+}
+
+
+//
+// Compute link costs
+//
+void calculate_link_costs()
+{
+  uint8_t link_index;
+  
+  for( link_index = 0; link_index < s_links.current_links; link_index++ )
+  {
+    s_links.links[link_index].current_cost = 
+      find_node(s_links.links[link_index].source)->energy;
+    
+    s_links.links[link_index].current_cost =
+      difference( s_links.links[link_index].current_cost, s_mean_energy );
+      
+  }
+}
+
+//
 // Returns pointer to node with matching node_id
 // If node is not found, returns NULL pointer
 //
@@ -92,11 +158,11 @@ node_t* find_node( uint8_t node_id )
 {
   uint8_t node_index;
   
-  for( node_index = 0; node_index < nodes.current_nodes; node_index++ )
+  for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
   {
-    if( nodes.nodes[node_index].id == node_id )
+    if( s_nodes.nodes[node_index].id == node_id )
     {
-      return &nodes.nodes[node_index];    
+      return &s_nodes.nodes[node_index];    
     }  
   }
   
@@ -112,17 +178,17 @@ node_t* node_with_smallest_distance( )
   uint8_t best_node = 0;
   energy_t min_distance=MAX_DISTANCE;
   
-  for( node_index = 0; node_index < nodes.current_nodes; node_index++ )
+  for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
   {
     //
     // If the current node has not been visited and has a smaller distance
     // than the current minimum, select it as the new minimum
     //
-    if ( ( nodes.nodes[node_index].distance < min_distance ) &&
-         ( 0 == nodes.nodes[node_index].visited ) )
+    if ( ( s_nodes.nodes[node_index].distance < min_distance ) &&
+         ( 0 == s_nodes.nodes[node_index].visited ) )
     {
       best_node = node_index;
-      min_distance = nodes.nodes[node_index].distance;
+      min_distance = s_nodes.nodes[node_index].distance;
     }
   }  
   
@@ -135,7 +201,7 @@ node_t* node_with_smallest_distance( )
   }
   else
   {
-    return &nodes.nodes[best_node];
+    return &s_nodes.nodes[best_node];
   }
   
 }
@@ -155,16 +221,16 @@ uint8_t dijkstra( uint8_t source_id )
   energy_t possible_distance;
 
 #ifdef DEBUG_ON
-  printf("Initialize nodes.\n"); // DEBUG
+  printf("Initialize s_nodes.\n"); // DEBUG
 #endif
   
   //
   // Initialize nodes' distance to 'infinity' and sets self as 'previous node'
   //
-  for( node_index = 0; node_index < nodes.current_nodes; node_index++ )
+  for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
   {
-    nodes.nodes[node_index].distance = MAX_DISTANCE;
-    nodes.nodes[node_index].p_previous = &nodes.nodes[node_index];
+    s_nodes.nodes[node_index].distance = MAX_DISTANCE;
+    s_nodes.nodes[node_index].p_previous = &s_nodes.nodes[node_index];
   }  
 
   //  
@@ -215,10 +281,10 @@ uint8_t dijkstra( uint8_t source_id )
     //
     // Check for all links leaving this node
     //
-    for( link_index = 0; link_index < links.current_links; link_index++ )
+    for( link_index = 0; link_index < s_links.current_links; link_index++ )
     {
       p_destination_node = NULL;
-      p_current_link = &links.links[link_index];
+      p_current_link = &s_links.links[link_index];
       
       //
       // If this link has the current node as source, select destination node
@@ -379,11 +445,11 @@ void print_all_links()
 {
   uint8_t link_index;
   
-  for( link_index = 0; link_index < links.current_links; link_index++ )
+  for( link_index = 0; link_index < s_links.current_links; link_index++ )
   {
-    print_link( &links.links[link_index] );
+    print_link( &s_links.links[link_index] );
 
-    //printf( " %0.2f", links.links[link_index].links_power );
+    //printf( " %0.2f", s_links.links[link_index].links_power );
   
     printf("\n");
   }
