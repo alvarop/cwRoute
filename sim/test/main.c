@@ -27,10 +27,13 @@
 #define Y (7)
 #define Z (8)
 
+#define TOTAL_ITERATIONS 10
+
 void sigint_handler( );
 
 int32_t main( int argc, char *argv[] )
 {    
+  uint32_t loop_counter;
   // Handle interrupt events to make sure files are closed before exiting
   (void) signal( SIGINT, sigint_handler );
 
@@ -39,8 +42,8 @@ int32_t main( int argc, char *argv[] )
   // S1, S2, R1, AP
   add_labeled_node( AP, 0, "AP" );
   add_labeled_node( S1, 0, "S1" );
-  add_labeled_node( R1, 1, "R1" );
   add_labeled_node( S2, 0, "S2" );
+  add_labeled_node( R1, 1, "R1" );
 
   // S1->R, S1->AP, S2->R, S2->AP, R1->AP
   add_link( R1, S1, 2.0 );
@@ -60,14 +63,24 @@ int32_t main( int argc, char *argv[] )
   // Initialize algorithm
   initialize_node_energy( AP );
 
+  print_node_energy( AP );
 
   // Calculate link costs before running dijkstra's algorithm
   calculate_link_costs(); 
   // Find least expensive route from (source) to AP    
-  dijkstra( AP );
-
-  print_shortest_path( S1 );
-  print_shortest_path( S2 );
+  dijkstra( AP );  
+  
+//  print_all_links();
+  for( loop_counter = 0; loop_counter < TOTAL_ITERATIONS; loop_counter++ )
+  {
+    print_shortest_path( S1 );
+    print_shortest_path( S2 );
+    
+    compute_mean_energy( AP );
+    
+    print_node_energy( AP );
+  }
+  
 #endif
 
 
