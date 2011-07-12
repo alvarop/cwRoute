@@ -43,11 +43,11 @@ int32_t main( int argc, char *argv[] )
   add_labeled_node( S2, 0, "S2" );
 
   // S1->R, S1->AP, S2->R, S2->AP, R1->AP
-  add_link( S1, R1, 2.0 );
-  add_link( S1, AP, 1.0 );
-  add_link( S2, R1, 0.5 );
-  add_link( S2, AP, 2.0 );
-  add_link( R1, AP, 1.0 ); 
+  add_link( R1, S1, 2.0 );
+  add_link( AP, S1, 1.0 );
+  add_link( R1, S2, 0.5 );
+  add_link( AP, S2, 2.0 );
+  add_link( AP, R1, 1.0 ); 
   
   printf("\nAdded links:\n");
   
