@@ -27,7 +27,7 @@
 #define Y (7)
 #define Z (8)
 
-#define TOTAL_ITERATIONS 10
+#define TOTAL_ITERATIONS 1000
 
 void sigint_handler( );
 
@@ -65,14 +65,15 @@ int32_t main( int argc, char *argv[] )
 
   print_node_energy( AP );
 
-  // Calculate link costs before running dijkstra's algorithm
-  calculate_link_costs(); 
-  // Find least expensive route from (source) to AP    
-  dijkstra( AP );  
-  
-//  print_all_links();
   for( loop_counter = 0; loop_counter < TOTAL_ITERATIONS; loop_counter++ )
   {
+    // Calculate link costs before running dijkstra's algorithm
+    calculate_link_costs(); 
+    // Find least expensive route from (source) to AP    
+    dijkstra( AP ); 
+  
+    //print_all_links();
+  
     print_shortest_path( S1 );
     print_shortest_path( S2 );
     

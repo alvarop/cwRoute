@@ -20,14 +20,14 @@ node_t* node_with_smallest_distance( );
 
 energy_t difference( energy_t number_a, energy_t number_b )
 {
-  if ( number_a > number_b )
-  {     
+  //if ( number_a > number_b )
+  //{     
     return number_a - number_b;
-  }
-  else
-  {
-    return number_b - number_a;
-  }  
+  //}
+  //else
+  //{
+  //  return number_b - number_a;
+  //}  
 }
 
 //
@@ -405,8 +405,7 @@ void print_shortest_path( uint8_t node_id )
     print_node_name( p_node->id );
     while( p_node->p_previous != p_node )
     {
-      printf("(%1.2f)[%1.2f]", 
-              find_link( p_node->p_previous->id, p_node->id )->current_cost,
+      printf("(%0.2f)", 
               find_link( p_node->p_previous->id, p_node->id )->links_power);
       
       p_node->energy += 
