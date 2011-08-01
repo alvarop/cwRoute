@@ -52,13 +52,12 @@ int32_t main( int argc, char *argv[] )
   add_link( AP, S2, 2.0 );
   add_link( AP, R1, 1.0 ); 
   
-  printf("\nAdded links:\n");
+  //printf("\nAdded links:\n");
   
   // Display all connections
-  print_all_links();
+  //print_all_links();
   
-  printf("\nRunning dijkstra's algorithm.\n");
-  
+  //printf("\nRunning dijkstra's algorithm.\n");
   
   // Initialize algorithm
   initialize_node_energy( AP );
@@ -67,10 +66,14 @@ int32_t main( int argc, char *argv[] )
 
   for( loop_counter = 0; loop_counter < TOTAL_ITERATIONS; loop_counter++ )
   {
+
+#ifndef REGULAR_DIJKSTRA
     // Calculate link costs before running dijkstra's algorithm
-    calculate_link_costs(); 
+    calculate_link_costs();
+#endif
+
     // Find least expensive route from (source) to AP    
-    dijkstra( AP ); 
+    dijkstra( AP );
   
     //print_all_links();
   

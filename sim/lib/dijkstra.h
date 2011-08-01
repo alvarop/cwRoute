@@ -38,7 +38,6 @@ struct link_s
   energy_t current_cost;  // Relative to mean
   uint8_t source;         // 
   uint8_t destination;    //
-  uint8_t used; 
 };
 
 typedef struct
@@ -53,8 +52,6 @@ typedef struct
   uint8_t current_links;
   link_t links[MAX_LINKS];
 } links_t;
-
-energy_t difference( energy_t, energy_t );
 
 uint8_t add_node( uint8_t, uint8_t );
 uint8_t add_link( uint8_t, uint8_t, energy_t );

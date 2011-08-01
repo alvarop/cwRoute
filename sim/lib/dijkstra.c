@@ -18,18 +18,6 @@ static energy_t s_mean_energy;
 node_t* find_node( uint8_t );
 node_t* node_with_smallest_distance( );
 
-energy_t difference( energy_t number_a, energy_t number_b )
-{
-  //if ( number_a > number_b )
-  //{     
-    return number_a - number_b;
-  //}
-  //else
-  //{
-  //  return number_b - number_a;
-  //}  
-}
-
 //
 // Add new node to nodes list
 //
@@ -75,9 +63,15 @@ uint8_t add_link( uint8_t source, uint8_t destination, energy_t link_power )
     new_link->links_power = link_power; 
     new_link->source = source;
     new_link->destination = destination;
-    
+
+    // Link cost to be computed later for modified Dijkstra's algorithm
     new_link->current_cost = 0;
-    new_link->used = 0;
+
+
+#ifdef REGULAR_DIJKSTRA
+    // Static link cost for regular Dijkstra's algorithm
+    new_link->current_cost = link_power;   
+#endif    
         
     s_links.current_links++;   
     
@@ -105,27 +99,27 @@ energy_t initialize_node_energy( uint8_t source_id )
       p_node = find_node( s_links.links[link_index].destination );
 
 #ifdef DEBUG_ON
-  print_node_name( p_node->id );
+  //print_node_name( p_node->id );
 #endif
       if ( !p_node->is_relay )
       {
         p_node->energy = s_links.links[link_index].links_power;
         s_mean_energy += p_node->energy;
 #ifdef DEBUG_ON
-  printf("(%f)", p_node->energy);
+  //printf("(%f)", p_node->energy);
 #endif
       }
 #ifdef DEBUG_ON
-  printf("\n");
+  //printf("\n");
 #endif
     }
   }  
 
   // Compute actual mean (subtracting 1 to account for source)
   s_mean_energy /= (s_nodes.current_nodes - 1 - s_nodes.current_relays);
-  
+
 #ifdef DEBUG_ON
-  printf("Mean Energy: %f\n", s_mean_energy);
+  //printf("Mean Energy: %f\n", s_mean_energy);
 #endif
   
   return s_mean_energy;
@@ -166,8 +160,7 @@ void calculate_link_costs()
         s_links.links[link_index].links_power +
         find_node(s_links.links[link_index].destination)->energy;
     
-    s_links.links[link_index].current_cost =
-      difference( s_links.links[link_index].current_cost, s_mean_energy );
+    s_links.links[link_index].current_cost -= s_mean_energy;
       
       //printf("{%f}(%f)[%f]\n",
       //find_node(s_links.links[link_index].source)->energy,
@@ -268,11 +261,11 @@ uint8_t dijkstra( uint8_t source_id )
   energy_t possible_distance;
 
 #ifdef DEBUG_D_ON
-  printf("Initialize s_nodes.\n"); // DEBUG
+  //printf("Initialize s_nodes.\n"); // DEBUG
 #endif
   
   //
-  // Initialize nodes' distance to 'infinity' and sets self as 'previous node'
+  // Initialize node distance to 'infinity' and sets self as 'previous node'
   //
   for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
   {
@@ -397,7 +390,7 @@ void print_shortest_path( uint8_t node_id )
   
   if ( p_node->p_previous == p_node )
   {
-    printf("No path to node ");
+    //printf("No path to node ");
     print_node_name( p_node->id );
   }
   else
@@ -405,19 +398,19 @@ void print_shortest_path( uint8_t node_id )
     print_node_name( p_node->id );
     while( p_node->p_previous != p_node )
     {
-      printf("(%0.2f)", 
-              find_link( p_node->p_previous->id, p_node->id )->links_power);
+      //printf("(%0.2f)", 
+      //        find_link( p_node->p_previous->id, p_node->id )->links_power);
       
       p_node->energy += 
           find_link( p_node->p_previous->id, p_node->id )->links_power;
     
       p_node = p_node->p_previous;
-      printf("->");
-      print_node_name( p_node->id ); 
+      //printf("->");
+      //print_node_name( p_node->id ); 
     };  
   }
       
-  printf("\n");
+  //printf("\n");
   
 }
 
@@ -451,7 +444,7 @@ uint8_t add_labeled_node( uint8_t node_id, uint8_t is_relay, char* label )
     node_info[node_info_index].label = malloc( strlen(label) + 1 );
     memcpy( node_info[node_info_index].label, label, strlen(label) + 1 );
     
-    printf("Added Node %s\n", node_info[node_info_index].label);
+    //printf("Added Node %s\n", node_info[node_info_index].label);
 
     node_info_index++;
   }
@@ -481,7 +474,7 @@ void print_node_name( uint8_t node_id )
   {
     if( node_info[node_index].id == node_id )
     {
-      printf( "%s", node_info[node_index].label );
+      //printf( "%s", node_info[node_index].label );
     }
   }
     
@@ -490,9 +483,9 @@ void print_node_name( uint8_t node_id )
 
 void print_link( link_t* link )
 {
-    print_node_name( link->source );
-    printf("-");
-    print_node_name( link->destination );
+    //print_node_name( link->source );
+    //printf("-");
+    //print_node_name( link->destination );
 }
 
 void print_all_links()
@@ -501,11 +494,11 @@ void print_all_links()
   
   for( link_index = 0; link_index < s_links.current_links; link_index++ )
   {
-    print_link( &s_links.links[link_index] );
+    //print_link( &s_links.links[link_index] );
 
-    printf( " %0.2f", s_links.links[link_index].current_cost );
+    //printf( " %0.2f", s_links.links[link_index].current_cost );
   
-    printf("\n");
+    //printf("\n");
   }
 
 }
@@ -514,26 +507,26 @@ void print_node_energy( uint8_t source_id )
 {
   uint8_t node_index;
   
-  printf("MEAN  ");
+  //printf("MEAN  ");
   
   for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
   {
     if( s_nodes.nodes[node_index].id != source_id )
     {
-      print_node_name( s_nodes.nodes[node_index].id );
-      printf("    ");      
+      //print_node_name( s_nodes.nodes[node_index].id );
+      //printf("    ");      
     }
   }
     
-  printf("\n");
+  //printf("\n");
   
-  printf("%1.3f ", s_mean_energy );
+  printf("%1.3f,", s_mean_energy );
   
   for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
   { 
     if( s_nodes.nodes[node_index].id != source_id )
     {   
-      printf("%0.3f ", s_nodes.nodes[node_index].energy );
+      printf("%0.3f,", s_nodes.nodes[node_index].energy );
     }      
   }
   
