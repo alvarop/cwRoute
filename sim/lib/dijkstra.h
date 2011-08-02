@@ -65,9 +65,11 @@ void print_shortest_path( uint8_t );
 uint8_t add_labeled_node( uint8_t, uint8_t, char* );
 void cleanup_node_labels();
 void print_node_name( uint8_t  );
-void print_node_energy( uint8_t source_id );
+void print_node_energy( uint8_t );
 void print_link( link_t* link );
 void print_all_links();
+void print_all_nodes( uint8_t );
+void generate_graph( uint8_t, uint32_t );
 #endif
 
 #endif /* _NODES_H */\

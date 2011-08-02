@@ -390,27 +390,41 @@ void print_shortest_path( uint8_t node_id )
   
   if ( p_node->p_previous == p_node )
   {
-    //printf("No path to node ");
+    printf("No path to node ");
     print_node_name( p_node->id );
   }
   else
   {
+  
     print_node_name( p_node->id );
     while( p_node->p_previous != p_node )
     {
-      //printf("(%0.2f)", 
-      //        find_link( p_node->p_previous->id, p_node->id )->links_power);
+      printf("(%0.2f)", 
+              find_link( p_node->p_previous->id, p_node->id )->links_power);
       
       p_node->energy += 
           find_link( p_node->p_previous->id, p_node->id )->links_power;
     
       p_node = p_node->p_previous;
-      //printf("->");
-      //print_node_name( p_node->id ); 
+      printf("->");
+      print_node_name( p_node->id ); 
+      
+      // Check for infinite loops
+      // TODO: Fix these, they shouldn't happen
+      // Maybe mark both up/down links as used when either is
+      if (p_node->p_previous->p_previous == p_node)
+      {
+        printf("Uh oh, going in circles between ");
+        print_node_name( p_node->id );
+        printf(" and ");
+        print_node_name( p_node->p_previous->id );
+        break;
+      }
+      
     };  
   }
       
-  //printf("\n");
+  printf("\n");
   
 }
 
@@ -474,7 +488,7 @@ void print_node_name( uint8_t node_id )
   {
     if( node_info[node_index].id == node_id )
     {
-      //printf( "%s", node_info[node_index].label );
+      printf( "%s", node_info[node_index].label );
     }
   }
     
@@ -533,5 +547,112 @@ void print_node_energy( uint8_t source_id )
   printf("\n");
   
 }
+
+void print_all_nodes( uint8_t source_id )
+{
+  uint8_t node_index;
+  
+  printf("MEAN,");
+  
+  for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
+  {
+    if( s_nodes.nodes[node_index].id != source_id )
+    {
+      print_node_name( s_nodes.nodes[node_index].id );
+      printf(",");      
+    }
+  }
+  printf("\n");
+  
+}
+
+//
+// Generate GraphViz file and render image of network
+//
+void generate_graph( uint8_t source_id, uint32_t file_number )
+{
+  uint8_t node_index;
+  uint8_t link_index;
+  FILE* f_graph;
+  char command[100];
+  
+  f_graph = fopen("images/graph.gv", "w" );
+  
+  if ( f_graph != NULL )
+  {
+    fprintf( f_graph,  "digraph network" );    
+           
+    fprintf( f_graph,  " {\n" );
+    
+    // Configuration stuff
+    
+    fprintf( f_graph, "edge [len=3]\n");
+    fprintf( f_graph, "nodesep=0.25\n");
+    fprintf( f_graph, "node[shape = doublecircle]; ");
+
+    // print_node_name to file
+      for( node_index = 0; node_index < node_info_index; node_index++ )
+      {
+        if( node_info[node_index].id == source_id )
+        {
+          fprintf( f_graph, "%s", node_info[node_index].label );
+        }
+      }
+    
+    fprintf( f_graph, ";\n");
+    
+    fprintf( f_graph, "node[shape = circle];\n");
+    
+    // All connections
+    for( link_index = 0; link_index < s_links.current_links; link_index++ )
+    {
+      
+      // print_node_name to file
+      for( node_index = 0; node_index < node_info_index; node_index++ )
+      {
+        if( node_info[node_index].id == s_links.links[link_index].destination )
+        {
+          fprintf( f_graph, "%s", node_info[node_index].label );
+        }
+      }
+      
+      fprintf( f_graph,  " -> " );
+      
+      // print_node_name to file
+      for( node_index = 0; node_index < node_info_index; node_index++ )
+      {
+        if( node_info[node_index].id == s_links.links[link_index].source )
+        {
+          fprintf( f_graph, "%s", node_info[node_index].label );
+        }
+      }
+      
+      fprintf( f_graph, "[ label=\"");
+      fprintf( f_graph,  "%0.0f", s_links.links[link_index].links_power );
+      fprintf( f_graph, "\" ]");
+      fprintf( f_graph,  ";\n" );
+    }
+    
+    // print_node_name to file
+    for( node_index = 0; node_index < node_info_index; node_index++ )
+    {
+      fprintf( f_graph, "%s [label=\"%s\\n(%04.0f)\"];", node_info[node_index].label,
+        node_info[node_index].label, 
+        find_node(node_info[node_index].id)->energy );
+    }
+    
+    fprintf( f_graph,  "}\n" );
+  
+    fclose( f_graph );
+    
+    // Generate svg of graph using GraphViz 'neato'
+    //system("neato -Tsvg -ograph.svg graph.gv");
+    //system("dot -Tsvg -ograph.svg graph.gv");
+    sprintf( command, "neato -Tjpg -oimages/graph%04d.jpg images/graph.gv", file_number);
+    system( command );
+    
+  }
+}
+
 #endif
 

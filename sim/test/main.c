@@ -27,7 +27,7 @@
 #define Y (7)
 #define Z (8)
 
-#define TOTAL_ITERATIONS 1000
+#define TOTAL_ITERATIONS 100
 
 void sigint_handler( );
 
@@ -83,7 +83,11 @@ int32_t main( int argc, char *argv[] )
     compute_mean_energy( AP );
     
     print_node_energy( AP );
+    
+    generate_graph( AP, loop_counter );
   }
+  
+    
   
 #endif
 
@@ -162,24 +166,57 @@ int32_t main( int argc, char *argv[] )
   add_link( Z, T, 5 );
   add_link( Z, Y, 12 );
   
+  // Make bidirectional links
+  add_link( S, U, 4 );
+  add_link( W, U, 3 );  
+  add_link( U, V, 3 );
+  add_link( W, V, 4 );  
+  add_link( V, X, 3 );
+  add_link( W, X, 6 );
+  add_link( S, T, 1 );
+  add_link( V, T, 4 );
+  add_link( U, T, 2 );
+  add_link( T, Y, 7 );
+  add_link( V, Y, 1 );
+  add_link( X, Y, 6 );
+  add_link( T, Z, 5 );
+  add_link( Y, Z, 12 );
   
-  printf("\nAdded links:\n");
-  
-  // Display all connections
-  print_all_links();
-  
-  printf("\nRunning dijkstra's algorithm.\n");
-  
-  // Find least expensive route from (source) to AP    
-  dijkstra( Z );
+  initialize_node_energy( Z );
 
-  print_shortest_path( S );
-  print_shortest_path( T );
-  print_shortest_path( U );
-  print_shortest_path( V );
-  print_shortest_path( W );
-  print_shortest_path( X );
-  print_shortest_path( Y );
+  print_all_nodes( Z );
+
+  print_node_energy( Z );
+  
+  for( loop_counter = 0; loop_counter < TOTAL_ITERATIONS; loop_counter++ )
+  {
+
+#ifndef REGULAR_DIJKSTRA
+    // Calculate link costs before running dijkstra's algorithm
+    calculate_link_costs();
+#endif
+
+    // Find least expensive route from (source) to AP    
+    dijkstra( Z );
+  
+    //print_all_links();  
+  
+    print_shortest_path( S );
+    print_shortest_path( T );
+    print_shortest_path( U );
+    print_shortest_path( V );
+    print_shortest_path( W );
+    print_shortest_path( X );
+    print_shortest_path( Y );
+    
+    compute_mean_energy( Z );
+    
+    print_node_energy( Z );
+    
+    generate_graph( Z, loop_counter );
+  }
+
+  
 #endif
 
 
