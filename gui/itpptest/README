@@ -1,0 +1,3 @@
+Install it++ libraries in ubuntu: sudo apt-get install libitpp-dev libitpp-doc
+
+Compile: g++ `pkg-config --cflags itpp` -o itpptest main.cpp `pkg-config --libs itpp`
