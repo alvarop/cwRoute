@@ -56,6 +56,9 @@ int main( int argc, char *argv[] )
   
   memset( serial_buffer, 0x00, sizeof(serial_buffer) );
   
+  // Open capture file
+  main_fp = fopen( "./rssi_tables.csv", "w" );
+  
   // Run forever
   for(;;)
   {  
@@ -138,14 +141,21 @@ void process_packet( uint8_t* buffer )
   { 
     printf("%2d ", row_index );
     
-    for( col_index = 0; col_index <= MAX_DEVICES; col_index++ )
+    for( col_index = 0; col_index < MAX_DEVICES; col_index++ )
     {
       printf("%+4d ", (int8_t)rssi_table[row_index][col_index] );
+      fprintf( main_fp, "%d,", (int8_t)rssi_table[row_index][col_index] );
     }
+    
+    printf("%+4d", (int8_t)rssi_table[row_index][col_index] );
+    fprintf( main_fp, "%d", (int8_t)rssi_table[row_index][col_index] );
+    
     printf("\r\n");
+    fprintf( main_fp, "\n" );
   }    
 
   printf("\r\n");
+  fprintf( main_fp, "\n" );
 
   time_counter++;
   return;
@@ -228,30 +238,16 @@ uint16_t find_and_escape_packet( uint8_t* old_buffer, uint8_t* new_buffer )
 }
 
 /*!
-  @brief swap bytes to correct for endianness
-*/
-inline uint16_t endian_swap16(uint16_t x)
-{
-  return (x>>8) | 
-    (x<<8);
-}
-
-/*!
-  @brief swap bytes to correct for endianness
-*/
-inline uint32_t endian_swap32(uint32_t x)
-{
-  return (x>>24) | 
-    ((x<<8) & 0x00FF0000) |
-    ((x>>8) & 0x0000FF00) |
-    (x<<24);
-}
-
-/*!
   @brief Handle interrupt event (SIGINT) so program exits cleanly
 */
-void sigint_handler( int32_t sig ) {
+void sigint_handler( int32_t sig ) 
+{
+    // Close the file
+    fclose( main_fp );
+    
+    // Close the serial port
     CloseComport( serial_port_number );
+
     printf("\nExiting...\n");
     exit(sig);
 }

@@ -42,9 +42,6 @@ void process_packet( uint8_t* buffer );
 uint8_t packet_in_buffer( uint8_t* );
 uint16_t find_and_escape_packet( uint8_t*, uint8_t* );
 
-inline uint16_t endian_swap16(uint16_t );
-inline uint32_t endian_swap32(uint32_t );
-
 void sigint_handler( int32_t sig );
 
 #endif
