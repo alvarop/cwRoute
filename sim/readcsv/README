@@ -1,0 +1,3 @@
+Compile: gcc -Wall -oreadcsv main.c
+Run: ./readcsv [filename].csv
+
