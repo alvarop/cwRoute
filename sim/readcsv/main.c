@@ -9,18 +9,21 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "dijkstra.h"
+
 #define INBUFSIZE (512)
 #define MAX_DEVICES (6)
 
 void parse_line( char*, int8_t* );
-uint8_t parse_table( FILE* , int8_t p_rssi_table[][MAX_DEVICES+1] );
-void clean_table( int8_t p_rssi_table[][MAX_DEVICES+1] );
-void add_links_from_table( int8_t p_rssi_table[][MAX_DEVICES+1] );
+uint8_t parse_table( FILE* , energy_t p_rssi_table[][MAX_DEVICES+1] );
+void clean_table( energy_t p_rssi_table[][MAX_DEVICES+1] );
+void add_links_from_table( energy_t p_rssi_table[][MAX_DEVICES+1] );
 
 int32_t main ( int32_t argc, char *argv[] )
 {  
   FILE *fp_in;      
-  int8_t rssi_table[MAX_DEVICES+1][MAX_DEVICES+1];
+  energy_t rssi_table[MAX_DEVICES+1][MAX_DEVICES+1];
+  uint32_t index = 0;
   
   // Make sure the filename is included
   if ( argc < 2 )
@@ -37,8 +40,18 @@ int32_t main ( int32_t argc, char *argv[] )
     printf( "Error opening file.\r\n" );
     return 1;
   }
+  
+  // Add nodes
+  add_labeled_node( 0, 0, "0" );
+  add_labeled_node( 1, 0, "1" );
+  add_labeled_node( 2, 0, "2" );
+  add_labeled_node( 3, 0, "3" );
+  add_labeled_node( 4, 0, "4" );
+  add_labeled_node( 5, 0, "5" );
+  add_labeled_node( 6, 0, "6" );
+  
    
-  while( parse_table( fp_in, rssi_table ) )
+  while( parse_table( fp_in, rssi_table ) )  
   {
     uint16_t col_index, row_index;        
       
@@ -66,6 +79,9 @@ int32_t main ( int32_t argc, char *argv[] )
 
     add_links_from_table( rssi_table );
     
+    //generate_graph( 0, index );
+    
+    index++;
   }
   
   fclose( fp_in );
@@ -78,7 +94,7 @@ int32_t main ( int32_t argc, char *argv[] )
  *
  * @brief Parse line from csv file an populate array row with contents
  * ****************************************************************************/
-void parse_line ( char* csv_line, int8_t* rssi_line )
+void parse_line ( char* csv_line, energy_t* rssi_line )
 {
   char *p_item;
   uint16_t item_index = 0;
@@ -87,7 +103,7 @@ void parse_line ( char* csv_line, int8_t* rssi_line )
   while( NULL != p_item )
   {    
     // Convert string to RSSI value and store in rssi_line
-    rssi_line[item_index] = (int8_t)strtol( p_item, NULL, 10 );
+    rssi_line[item_index] = (energy_t)strtol( p_item, NULL, 10 );
     item_index++;
     p_item = strtok( NULL, "," );
   }
@@ -99,7 +115,7 @@ void parse_line ( char* csv_line, int8_t* rssi_line )
  *
  * @brief Read lines from CSV file and parse them until an empty line is found
  * ****************************************************************************/
-uint8_t parse_table ( FILE* fp_csv_file, int8_t p_rssi_table[][MAX_DEVICES+1] )
+uint8_t parse_table ( FILE* fp_csv_file, energy_t p_rssi_table[][MAX_DEVICES+1] )
 {
   char csv_line[INBUFSIZE];   // Buffer for reading a line in the file
   uint16_t line_index = 0;
@@ -139,7 +155,7 @@ uint8_t parse_table ( FILE* fp_csv_file, int8_t p_rssi_table[][MAX_DEVICES+1] )
  *
  * @brief Compare the RSSI from two links and only keep the best value
  * ****************************************************************************/
-void clean_table( int8_t rssi_table[][MAX_DEVICES+1] )
+void clean_table( energy_t rssi_table[][MAX_DEVICES+1] )
 {
   uint16_t col_index, row_index;
   
@@ -163,7 +179,7 @@ void clean_table( int8_t rssi_table[][MAX_DEVICES+1] )
  *
  * @brief Generate dijkstra links from cleaned up table
  * ****************************************************************************/
-void add_links_from_table( int8_t rssi_table[][MAX_DEVICES+1] )
+void add_links_from_table( energy_t rssi_table[][MAX_DEVICES+1] )
 {
   uint16_t col_index, row_index;
   
@@ -171,8 +187,10 @@ void add_links_from_table( int8_t rssi_table[][MAX_DEVICES+1] )
   {
     for( col_index = row_index + 1; col_index < ( MAX_DEVICES+1 ); col_index++ )
     {
-      printf("%d->%d[%d]\n", row_index, col_index, 
-                                  rssi_table[row_index][col_index]);
+      /*printf("%d->%d[%d]\n", row_index, col_index, 
+                                  rssi_table[row_index][col_index]);*/
+      // Add link
+      add_link( row_index, col_index, rssi_table[row_index][col_index] );
     }
   }
 }
