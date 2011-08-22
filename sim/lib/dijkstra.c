@@ -17,6 +17,7 @@ static energy_t s_mean_energy;
 
 node_t* find_node( uint8_t );
 node_t* node_with_smallest_distance( );
+link_t* find_link( uint8_t, uint8_t );
 
 //
 // Add new node to nodes list
@@ -56,10 +57,20 @@ uint8_t add_link( uint8_t source, uint8_t destination, energy_t link_power )
   link_t* new_link;
   
   //TODO check if source and destination actually exist!
+
+  // If the same link already exists, just update it
+  new_link = find_link(source, destination);
+
+  if( new_link == NULL  )
+  {
+    // Add new link
+    new_link = &s_links.links[s_links.current_links]; 
+    s_links.current_links++; 
+  }
   
   if( s_links.current_links < MAX_LINKS )
   {
-    new_link = &s_links.links[s_links.current_links];
+    
     new_link->links_power = link_power; 
     new_link->source = source;
     new_link->destination = destination;
@@ -73,7 +84,7 @@ uint8_t add_link( uint8_t source, uint8_t destination, energy_t link_power )
     new_link->current_cost = link_power;   
 #endif    
         
-    s_links.current_links++;   
+       
     
     return 0;
   }
@@ -419,7 +430,7 @@ void print_shortest_path( uint8_t node_id )
     print_node_name( p_node->id );
     while( p_node->p_previous != p_node )
     {
-      printf("(%0.2f)", 
+      printf("(%d)", 
               find_link( p_node->p_previous->id, p_node->id )->links_power);
       
       p_node->energy += 
@@ -542,13 +553,13 @@ void print_node_energy( uint8_t source_id )
     
   //printf("\n");
   
-  printf("%1.3f,", s_mean_energy );
+  printf("%d,", s_mean_energy );
   
   for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
   { 
     if( s_nodes.nodes[node_index].id != source_id )
     {   
-      printf("%0.3f,", s_nodes.nodes[node_index].energy );
+      printf("%df,", s_nodes.nodes[node_index].energy );
     }      
   }
   
@@ -636,7 +647,7 @@ void generate_graph( uint8_t source_id, uint32_t file_number )
       }
       
       fprintf( f_graph, "[ label=\"");
-      fprintf( f_graph,  "%0.0f", s_links.links[link_index].links_power );
+      fprintf( f_graph,  "%d", s_links.links[link_index].links_power );
       fprintf( f_graph, "\" ]");
       fprintf( f_graph,  ";\n" );
     }
@@ -644,7 +655,7 @@ void generate_graph( uint8_t source_id, uint32_t file_number )
     // print_node_name to file
     for( node_index = 0; node_index < node_info_index; node_index++ )
     {
-      fprintf( f_graph, "%s [label=\"%s\\n(%04.0f)\"];", node_info[node_index].label,
+      fprintf( f_graph, "%s [label=\"%s\\n(%d)\"];", node_info[node_index].label,
         node_info[node_index].label, 
         find_node(node_info[node_index].id)->energy );
     }
@@ -656,7 +667,8 @@ void generate_graph( uint8_t source_id, uint32_t file_number )
     // Generate svg of graph using GraphViz 'neato'
     //system("neato -Tsvg -ograph.svg graph.gv");
     //system("dot -Tsvg -ograph.svg graph.gv");
-    sprintf( command, "neato -Tjpg -oimages/graph%04d.jpg images/graph.gv", file_number);
+    //sprintf( command, "neato -Tjpg -oimages/graph%04d.jpg images/graph.gv", file_number);
+    sprintf( command, "dot -Tjpg -oimages/graph%04d.jpg images/graph.gv", file_number);
     system( command );
     
   }
