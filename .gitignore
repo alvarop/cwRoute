@@ -1,0 +1,7 @@
+*.[oa]
+*~
+*.csv
+*.aux
+*.log
+*.toc
+build/
