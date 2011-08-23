@@ -1,0 +1,55 @@
+\documentclass{article}
+
+%\usepackage[draft]{pdfdraftcopy} %http://sarovar.org/projects/pdfdraftcopy/
+%\usepackage{todonotes} %http://tug.ctan.org/pkg/todonotes/
+%\usepackage{fullpage}
+\usepackage{graphicx}
+\begin{document}
+\title{Energy Efficient Routing Algorithm for Body Sensor Networks}
+\author{Alvaro Prieto}
+\maketitle
+
+\pagebreak
+
+\section{Introduction}
+This document contains a brief description of the proposed routing algorithm.
+
+\section{Overview}
+The primary goal of this algorithm is to maximize network lifetime by normalizing power use across the network. Message routing will change depending on the total energy used by each sensor node. For this specific implementation, there are no relay nodes. Each sensor can relay information to and from other sensors.
+
+This routing algorithm is based on a modified version of Dijkstra's algorithm.
+
+\section{Operation}
+
+\subsection{Theory}
+Instead of choosing the path that maximizes the lifetime of each individual node, a path is chosen such that the overall lifetime of the network is maximized.
+
+\subsection{Initialization}
+The first step in the process consists of characterizing the links between each sensor node and all relays and access point. The minimum power required to maintain each link will be measured and stored(referred to as\emph{link power}). This initialization procedure will be re-run at some (to be determined, possibly integrated into normal operations) interval to deal with topology changes in the network.
+
+\subsection{Routing}
+\begin{itemize}
+\item Compute \emph{accumulated energy} average from power required for a direct link (i.e. without using relays). This is only done once.
+
+\item Determine \emph{link cost} by:
+\begin{enumerate}
+\item Add \emph{accumulated energy} to power required to use selected link.
+\item Subtract \emph{accumulated energy} average
+\end{enumerate}
+
+\item Run Dijkstra's algorithm to select best path
+
+\item Compute new accumulated energy average
+
+\item Determine  \emph{link cost} and continue...
+
+\end{itemize}
+
+%\bibliographystyle{IEEEtran}
+%\bibliographystyle{plain}
+%\bibliography{alvaro}{}
+
+%\pagebreak
+%\listoftodos
+
+\end{document}
