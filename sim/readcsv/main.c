@@ -15,75 +15,93 @@
 #define MAX_DEVICES (6)
 
 void parse_line( char*, int8_t* );
-uint8_t parse_table( FILE* , energy_t p_rssi_table[][MAX_DEVICES+1] );
-void clean_table( energy_t p_rssi_table[][MAX_DEVICES+1] );
-void add_links_from_table( energy_t p_rssi_table[][MAX_DEVICES+1] );
+uint8_t parse_table( FILE* , int8_t p_rssi_table[][MAX_DEVICES+1] );
+void clean_table( int8_t p_rssi_table[][MAX_DEVICES+1] );
+void add_links_from_table( int8_t p_rssi_table[][MAX_DEVICES+1] );
 
 int32_t main ( int32_t argc, char *argv[] )
 {  
-  FILE *fp_in;      
-  energy_t rssi_table[MAX_DEVICES+1][MAX_DEVICES+1];
+  FILE *fp_in, *fp_out;      
+  int8_t rssi_table[MAX_DEVICES+1][MAX_DEVICES+1];
   uint32_t index = 0;
+  char node_id_string[3];
+  uint8_t node_index;
   
   // Make sure the filename is included
-  if ( argc < 2 )
+  if ( argc < 3 )
   {
-    printf( "Usage: %s filename\r\n", argv[0] );
+    printf( "Usage: %s infile outfile\r\n", argv[0] );
     return 1;
   }
   
-  // Open csv file
+  // Open input csv file
   fp_in = fopen( argv[1], "r" );
   
   if( NULL == fp_in )
   {
-    printf( "Error opening file.\r\n" );
+    printf( "Error opening input file.\r\n" );
     return 1;
   }
   
-  // Add nodes
-  add_labeled_node( 0, 0, "0" );
-  add_labeled_node( 1, 0, "1" );
-  add_labeled_node( 2, 0, "2" );
-  add_labeled_node( 3, 0, "3" );
-  add_labeled_node( 4, 0, "4" );
-  add_labeled_node( 5, 0, "5" );
-  add_labeled_node( 6, 0, "6" );
+  // Open output csv file
+  fp_out = fopen( argv[2], "w" );
   
-   
-  while( parse_table( fp_in, rssi_table ) )  
+  if( NULL == fp_out )
   {
-    uint16_t col_index, row_index;        
-      
-    for( row_index = 0; row_index < ( MAX_DEVICES+1 ); row_index++ )
-    {
-      for( col_index = 0; col_index < ( MAX_DEVICES+1 ); col_index++ )
-      {
-        printf("%+4d,", rssi_table[row_index][col_index]);
-      }
-      printf("\n");
-    }
-    printf("\n");
+    printf( "Error opening input file.\r\n" );
+    return 1;
+  }
+  
+  // Add nodes 
+  for( node_index = 0; node_index < (MAX_DEVICES + 1); node_index++ )
+  {
+    sprintf( node_id_string, "%d", node_index );
+    add_labeled_node( node_index, 0, node_id_string );
+  }
+  
+  initialize_node_energy( 0 );
+  
+  print_node_energy( 0, fp_out );
+  
+  //parse_table( fp_in, rssi_table ); 
+  while( parse_table( fp_in, rssi_table ) )  
+  {    
     
-    clean_table( rssi_table );
-    
-    for( row_index = 0; row_index < ( MAX_DEVICES+1 ); row_index++ )
-    {
-      for( col_index = 0; col_index < ( MAX_DEVICES+1 ); col_index++ )
-      {
-        printf("%+4d,", rssi_table[row_index][col_index]);
-      }
-      printf("\n");
-    }
-    printf("\n");
+    clean_table( rssi_table );       
 
     add_links_from_table( rssi_table );
     
+#ifndef REGULAR_DIJKSTRA
+    // Calculate link costs before running dijkstra's algorithm
+    calculate_link_costs();
+#endif
+
+    // Run dijkstra's algorithm with 0 being the access point
+    dijkstra( 0 );
+    
+    // Display shortest paths and update energies
+    for( node_index = 1; node_index < (MAX_DEVICES + 1); node_index++ )
+    {
+      compute_shortest_path( node_index );
+      print_shortest_path( node_index );
+    }
+    
+    //print_all_links();
+    
+    // Compute engergy mean and subtract from each individual mean
+    compute_mean_energy( 0 );    
+    
+    printf("Round %d\n", index);
+    print_node_energy( 0, fp_out );
+    
     //generate_graph( 0, index );
+    
+    
     
     index++;
   }
-  
+
+  fclose( fp_out );  
   fclose( fp_in );
   
   return 0;
@@ -94,7 +112,7 @@ int32_t main ( int32_t argc, char *argv[] )
  *
  * @brief Parse line from csv file an populate array row with contents
  * ****************************************************************************/
-void parse_line ( char* csv_line, energy_t* rssi_line )
+void parse_line ( char* csv_line, int8_t* rssi_line )
 {
   char *p_item;
   uint16_t item_index = 0;
@@ -115,7 +133,7 @@ void parse_line ( char* csv_line, energy_t* rssi_line )
  *
  * @brief Read lines from CSV file and parse them until an empty line is found
  * ****************************************************************************/
-uint8_t parse_table ( FILE* fp_csv_file, energy_t p_rssi_table[][MAX_DEVICES+1] )
+uint8_t parse_table ( FILE* fp_csv_file, int8_t p_rssi_table[][MAX_DEVICES+1] )
 {
   char csv_line[INBUFSIZE];   // Buffer for reading a line in the file
   uint16_t line_index = 0;
@@ -155,7 +173,7 @@ uint8_t parse_table ( FILE* fp_csv_file, energy_t p_rssi_table[][MAX_DEVICES+1] 
  *
  * @brief Compare the RSSI from two links and only keep the best value
  * ****************************************************************************/
-void clean_table( energy_t rssi_table[][MAX_DEVICES+1] )
+void clean_table( int8_t rssi_table[][MAX_DEVICES+1] )
 {
   uint16_t col_index, row_index;
   
@@ -179,7 +197,7 @@ void clean_table( energy_t rssi_table[][MAX_DEVICES+1] )
  *
  * @brief Generate dijkstra links from cleaned up table
  * ****************************************************************************/
-void add_links_from_table( energy_t rssi_table[][MAX_DEVICES+1] )
+void add_links_from_table( int8_t rssi_table[][MAX_DEVICES+1] )
 {
   uint16_t col_index, row_index;
   
@@ -190,7 +208,7 @@ void add_links_from_table( energy_t rssi_table[][MAX_DEVICES+1] )
       /*printf("%d->%d[%d]\n", row_index, col_index, 
                                   rssi_table[row_index][col_index]);*/
       // Add link
-      add_link( row_index, col_index, rssi_table[row_index][col_index] );
+      add_link( row_index, col_index, 127-rssi_table[row_index][col_index] );
     }
   }
 }

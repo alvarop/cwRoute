@@ -9,11 +9,11 @@
 
 #define MAX_NODES (10)
 #define MAX_LINKS (30)
-#define MAX_DISTANCE 127
+#define MAX_DISTANCE 255
 
 // Use type definition since actual datatype might change
 // (don't want to use floating point on the microcontroller...)
-typedef int8_t energy_t ;
+typedef int32_t energy_t ;
 
 typedef struct node_s node_t;
 typedef struct link_s link_t;
@@ -38,6 +38,7 @@ struct link_s
   energy_t current_cost;  // Relative to mean
   uint8_t source;         // 
   uint8_t destination;    //
+  uint8_t active;         //
 };
 
 typedef struct
@@ -59,13 +60,14 @@ void calculate_link_costs();
 energy_t initialize_node_energy( uint8_t source_id );
 energy_t compute_mean_energy( uint8_t source_id );
 uint8_t dijkstra( uint8_t );
-void print_shortest_path( uint8_t );
+void compute_shortest_path( uint8_t node_id );
 
 #ifdef DEBUG_ON
+void print_shortest_path( uint8_t );
 uint8_t add_labeled_node( uint8_t, uint8_t, char* );
 void cleanup_node_labels();
 void print_node_name( uint8_t  );
-void print_node_energy( uint8_t );
+void print_node_energy( uint8_t, FILE* );
 void print_link( link_t* link );
 void print_all_links();
 void print_all_nodes( uint8_t );
