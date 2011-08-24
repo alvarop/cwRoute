@@ -16,10 +16,19 @@ uint8_t parse_table( FILE* , mat* );
 int main( int32_t argc, char *argv[] )
 {
   FILE *fp_in, *fp_out; 
+  
   mat *samples;
+  mat leads_initial;
+  mat leads_to_reconstruct;
+  // New leads used to generate the ICs for each new beat
+  mat leads_new;
+  mat ICs_initial;
+  mat A_initial;
+  mat ICs_current;
+  mat A_current;
+  mat leads_reconst;
   
-  
-  
+
   // Make sure the filename is included
   if ( argc < 4 )
   {
@@ -45,53 +54,48 @@ int main( int32_t argc, char *argv[] )
   
   //cout << *samples << endl;
   
-  mat *leads_initial = new mat;
-  mat *leads_to_reconstruct = new mat;
-  
-  // New leads used to generate the ICs for each new beat
-  mat *leads_new = new mat;
+ 
   
   // Leads I(0),II(1), and V2(7)
-  leads_initial->append_row( samples->get_col(0) );
-  leads_initial->append_row( samples->get_col(1) );
-  leads_initial->append_row( samples->get_col(7) );
+  leads_initial.append_row( samples->get_col(0) );
+  leads_initial.append_row( samples->get_col(1) );
+  leads_initial.append_row( samples->get_col(7) );
   
- 
   // Whichever leads are not used to generate ICs
-  leads_to_reconstruct->append_row( samples->get_col(2) );
-  leads_to_reconstruct->append_row( samples->get_col(3) );
-  leads_to_reconstruct->append_row( samples->get_col(4) );
-  leads_to_reconstruct->append_row( samples->get_col(5) );
-  leads_to_reconstruct->append_row( samples->get_col(6) );
-  leads_to_reconstruct->append_row( samples->get_col(8) );
-  leads_to_reconstruct->append_row( samples->get_col(9) );
-  leads_to_reconstruct->append_row( samples->get_col(10) );
-  leads_to_reconstruct->append_row( samples->get_col(11) );
-  leads_to_reconstruct->append_row( samples->get_col(12) );
-  leads_to_reconstruct->append_row( samples->get_col(13) );
-  leads_to_reconstruct->append_row( samples->get_col(14) );
+  leads_to_reconstruct.append_row( samples->get_col(2) );
+  leads_to_reconstruct.append_row( samples->get_col(3) );
+  leads_to_reconstruct.append_row( samples->get_col(4) );
+  leads_to_reconstruct.append_row( samples->get_col(5) );
+  leads_to_reconstruct.append_row( samples->get_col(6) );
+  leads_to_reconstruct.append_row( samples->get_col(8) );
+  leads_to_reconstruct.append_row( samples->get_col(9) );
+  leads_to_reconstruct.append_row( samples->get_col(10) );
+  leads_to_reconstruct.append_row( samples->get_col(11) );
+  leads_to_reconstruct.append_row( samples->get_col(12) );
+  leads_to_reconstruct.append_row( samples->get_col(13) );
+  leads_to_reconstruct.append_row( samples->get_col(14) );
 
 
   cout << "Starting fastica" << endl;
   
   // Training  
-  Fast_ICA fastica(*leads_initial); 
-  fastica.set_nrof_independent_components(3);
-  fastica.set_approach(FICA_APPROACH_DEFL);
-  fastica.separate();
+  Fast_ICA fastica_train(leads_initial); 
+  fastica_train.set_nrof_independent_components(3);
+  //fastica_train.set_approach(FICA_APPROACH_DEFL);
+  fastica_train.separate();
   
   cout << "done separating" << endl;
   
-  mat ICs_initial = fastica.get_independent_components();
+  ICs_initial = fastica_train.get_independent_components();
   
   cout << "done getting ICs" << endl;
   
-  mat A_initial = fastica.get_mixing_matrix();
+  A_initial = fastica_train.get_mixing_matrix();
   
   cout << "done getting mixing matrix" << endl;  
 
   // Generate transform from IC to remaining leads
-  mat reconst_transform = (*leads_to_reconstruct) * ICs_initial.T() *
+  mat reconst_transform = leads_to_reconstruct * ICs_initial.T() *
                                   inv( ICs_initial * ICs_initial.T() );
                                   
 
@@ -114,27 +118,23 @@ int main( int32_t argc, char *argv[] )
   fclose(fp_in);
   
     // Leads I(0),II(1), and V2(7)
-  leads_new->append_row( samples->get_col(0) );
-  leads_new->append_row( samples->get_col(1) );
-  leads_new->append_row( samples->get_col(7) );
+  leads_new.append_row( samples->get_col(0) );
+  leads_new.append_row( samples->get_col(1) );
+  leads_new.append_row( samples->get_col(7) );
   
-  cout << "Reconstructing " << leads_new->rows() << "," << leads_new->cols()  << endl;
+  cout << "Reconstructing " << leads_new.rows() << "," << leads_new.cols()  << endl;
 
   // Reconstruction
-  Fast_ICA fastica2(*leads_new);
+  Fast_ICA fastica_train_reconstruct(leads_new);  
+  fastica_train_reconstruct.set_nrof_independent_components(3); 
+  //fastica_train_reconstruct.set_approach(FICA_APPROACH_DEFL);
+  fastica_train_reconstruct.set_init_guess(A_initial);
+  fastica_train_reconstruct.separate();    
   
-  fastica2.set_nrof_independent_components(3);
- 
-  //fastica2.set_approach(FICA_APPROACH_DEFL);
-
-  fastica2.set_init_guess(A_initial);
-
-  fastica2.separate();    
+  ICs_current = fastica_train_reconstruct.get_independent_components();
   
-  mat ICs_current = fastica2.get_independent_components();
-  
-  mat A_current = fastica2.get_mixing_matrix();
-  mat leads_reconst = (reconst_transform * ICs_current).T();
+  A_current = fastica_train_reconstruct.get_mixing_matrix();
+  leads_reconst = (reconst_transform * ICs_current).T();
 
   
 
@@ -166,11 +166,7 @@ int main( int32_t argc, char *argv[] )
   
   cout << "done" << endl;
 
-  // Cleanup
-  delete leads_to_reconstruct;
-  delete leads_initial;
-  delete leads_new; 
-  
+  // Cleanup  
   delete samples;
 
   return 0;
