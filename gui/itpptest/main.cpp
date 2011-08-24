@@ -8,21 +8,22 @@ using std::cout;
 using std::endl;
 #define TOTAL_LEADS (15)
 #define INBUFSIZE (1024)
+#define MAX_SAMPLES (1000)
 
 void parse_line( char*, mat* );
 uint8_t parse_table( FILE* , mat* );
 
 int main( int32_t argc, char *argv[] )
 {
-  FILE *fp_in; 
+  FILE *fp_in, *fp_out; 
   mat *samples;
   
-  samples = new mat;
+  
   
   // Make sure the filename is included
-  if ( argc < 2 )
+  if ( argc < 4 )
   {
-    printf( "Usage: %s infile\r\n", argv[0] );
+    printf( "Usage: %s infile1 infile2 outfile\r\n", argv[0] );
     return 1;
   }
   
@@ -35,6 +36,7 @@ int main( int32_t argc, char *argv[] )
     return 1;
   }
   
+  samples = new mat;
   // Read in CSV file and populate samples matrix
   parse_table(fp_in, samples);
   
@@ -54,7 +56,6 @@ int main( int32_t argc, char *argv[] )
   leads_initial->append_row( samples->get_col(1) );
   leads_initial->append_row( samples->get_col(7) );
   
- 
  
   // Whichever leads are not used to generate ICs
   leads_to_reconstruct->append_row( samples->get_col(2) );
@@ -87,20 +88,44 @@ int main( int32_t argc, char *argv[] )
   
   mat A_initial = fastica.get_mixing_matrix();
   
-  cout << "done getting mixing matrix" << endl;
-         
+  cout << "done getting mixing matrix" << endl;  
 
   // Generate transform from IC to remaining leads
   mat reconst_transform = (*leads_to_reconstruct) * ICs_initial.T() *
                                   inv( ICs_initial * ICs_initial.T() );
                                   
 
+  delete samples;
+    
+  // Open input csv file
+  fp_in = fopen( argv[2], "r" );
+  
+  if( NULL == fp_in )
+  {
+    printf( "Error opening input file.\r\n" );
+    return 1;
+  }
+  
+  samples = new mat;
+  // Read in CSV file and populate samples matrix
+  parse_table(fp_in, samples);
+  
+  // Close input file
+  fclose(fp_in);
+  
+    // Leads I(0),II(1), and V2(7)
+  leads_new->append_row( samples->get_col(0) );
+  leads_new->append_row( samples->get_col(1) );
+  leads_new->append_row( samples->get_col(7) );
+  
+  cout << "Reconstructing " << leads_new->rows() << "," << leads_new->cols()  << endl;
+
   // Reconstruction
-  Fast_ICA fastica2(*leads_initial);
+  Fast_ICA fastica2(*leads_new);
   
   fastica2.set_nrof_independent_components(3);
  
-  fastica2.set_approach(FICA_APPROACH_DEFL);
+  //fastica2.set_approach(FICA_APPROACH_DEFL);
 
   fastica2.set_init_guess(A_initial);
 
@@ -109,8 +134,37 @@ int main( int32_t argc, char *argv[] )
   mat ICs_current = fastica2.get_independent_components();
   
   mat A_current = fastica2.get_mixing_matrix();
-  mat leads_reconst = reconst_transform * ICs_current;
+  mat leads_reconst = (reconst_transform * ICs_current).T();
 
+  
+
+  cout << "Writing recostructed leads to file" << endl;
+  
+  // Open input csv file
+  fp_out = fopen( argv[3], "w" );
+  
+  if( NULL == fp_out )
+  {
+    printf( "Error opening output file.\r\n" );
+    return 1;
+  }   
+  
+  int rows, cols;    
+  
+  // Output reconstructed leads to file
+  for ( rows = 0; rows < leads_reconst.rows(); rows++ )
+  {
+    for ( cols = 0; cols < leads_reconst.cols(); cols++ )
+    {
+      fprintf(fp_out, "%g,", leads_reconst.get(rows,cols) );
+    }
+    fprintf(fp_out, "\n" );
+  }
+
+  // Close output file
+  fclose(fp_out);
+  
+  cout << "done" << endl;
 
   // Cleanup
   delete leads_to_reconstruct;
@@ -168,6 +222,11 @@ uint8_t parse_table ( FILE* fp_csv_file, mat* p_value_table )
     parse_line( csv_line, p_value_table );         
     
     line_index++;
+    
+    if( line_index >= MAX_SAMPLES )
+    {
+      return 1;
+    }
   }
   
   // Did not read table successfully
