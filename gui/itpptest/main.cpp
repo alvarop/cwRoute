@@ -11,22 +11,26 @@ using std::endl;
 #define MAX_SAMPLES (1000)
 
 void parse_line( char*, mat* );
-uint8_t parse_table( FILE* , mat* );
+int parse_table( FILE* , mat* );
 
 int main( int32_t argc, char *argv[] )
 {
   FILE *fp_in, *fp_out; 
   
-  mat *samples;
-  mat leads_initial;
-  mat leads_to_reconstruct;
-  // New leads used to generate the ICs for each new beat
-  mat leads_new;
-  mat ICs_initial;
+  mat *samples;             // Matrix with sampled data
+  mat leads_initial;        // Initial sampled leads (I,II, and V2)
+  mat leads_to_reconstruct; // Leads not used to generate ICs
+  mat *leads_new;            // New leads to generate the ICs for each new beat
+  mat ICs_initial;          //
+  mat reconst_transform;    // Transform used to reconstruct 12 leads from 3
   mat A_initial;
   mat ICs_current;
   mat A_current;
   mat leads_reconst;
+  
+  Fast_ICA *fastica_train_reconstruct;
+  
+  int rows, cols;
   
 
   // Make sure the filename is included
@@ -45,16 +49,19 @@ int main( int32_t argc, char *argv[] )
     return 1;
   }
   
+  // Create new matrix to store sampled data
   samples = new mat;
+  
   // Read in CSV file and populate samples matrix
   parse_table(fp_in, samples);
   
   // Close input file
   fclose(fp_in);
-  
-  //cout << *samples << endl;
-  
- 
+    
+  //
+  // Construct leads_initial and leads_to_reconstruct matrices from csv file
+  // data stored in the samples matrix
+  //
   
   // Leads I(0),II(1), and V2(7)
   leads_initial.append_row( samples->get_col(0) );
@@ -75,32 +82,24 @@ int main( int32_t argc, char *argv[] )
   leads_to_reconstruct.append_row( samples->get_col(13) );
   leads_to_reconstruct.append_row( samples->get_col(14) );
 
-
-  cout << "Starting fastica" << endl;
   
-  // Training  
+  //
+  // Begin ICA training
+  //  
   Fast_ICA fastica_train(leads_initial); 
   fastica_train.set_nrof_independent_components(3);
   //fastica_train.set_approach(FICA_APPROACH_DEFL);
-  fastica_train.separate();
-  
-  cout << "done separating" << endl;
-  
-  ICs_initial = fastica_train.get_independent_components();
-  
-  cout << "done getting ICs" << endl;
-  
+  fastica_train.separate();  
+  ICs_initial = fastica_train.get_independent_components();  
   A_initial = fastica_train.get_mixing_matrix();
-  
-  cout << "done getting mixing matrix" << endl;  
 
+  //
   // Generate transform from IC to remaining leads
-  mat reconst_transform = leads_to_reconstruct * ICs_initial.T() *
+  //
+  reconst_transform = leads_to_reconstruct * ICs_initial.T() *
                                   inv( ICs_initial * ICs_initial.T() );
                                   
-
-  delete samples;
-    
+      
   // Open input csv file
   fp_in = fopen( argv[2], "r" );
   
@@ -109,36 +108,6 @@ int main( int32_t argc, char *argv[] )
     printf( "Error opening input file.\r\n" );
     return 1;
   }
-  
-  samples = new mat;
-  // Read in CSV file and populate samples matrix
-  parse_table(fp_in, samples);
-  
-  // Close input file
-  fclose(fp_in);
-  
-    // Leads I(0),II(1), and V2(7)
-  leads_new.append_row( samples->get_col(0) );
-  leads_new.append_row( samples->get_col(1) );
-  leads_new.append_row( samples->get_col(7) );
-  
-  cout << "Reconstructing " << leads_new.rows() << "," << leads_new.cols()  << endl;
-
-  // Reconstruction
-  Fast_ICA fastica_train_reconstruct(leads_new);  
-  fastica_train_reconstruct.set_nrof_independent_components(3); 
-  //fastica_train_reconstruct.set_approach(FICA_APPROACH_DEFL);
-  fastica_train_reconstruct.set_init_guess(A_initial);
-  fastica_train_reconstruct.separate();    
-  
-  ICs_current = fastica_train_reconstruct.get_independent_components();
-  
-  A_current = fastica_train_reconstruct.get_mixing_matrix();
-  leads_reconst = (reconst_transform * ICs_current).T();
-
-  
-
-  cout << "Writing recostructed leads to file" << endl;
   
   // Open input csv file
   fp_out = fopen( argv[3], "w" );
@@ -149,18 +118,61 @@ int main( int32_t argc, char *argv[] )
     return 1;
   }   
   
-  int rows, cols;    
+  // Free up memory used by the samples matrix
+  delete samples;
+  samples = new mat;
   
-  // Output reconstructed leads to file
-  for ( rows = 0; rows < leads_reconst.rows(); rows++ )
-  {
-    for ( cols = 0; cols < leads_reconst.cols(); cols++ )
-    {
-      fprintf(fp_out, "%g,", leads_reconst.get(rows,cols) );
-    }
-    fprintf(fp_out, "\n" );
-  }
+  leads_new = new mat;
+  
+  // Read in CSV file and populate samples matrix
+  while( parse_table(fp_in, samples) )
+  {  
+    
+    // Leads I(0),II(1), and V2(7)
+    leads_new->append_row( samples->get_col(0) );
+    leads_new->append_row( samples->get_col(1) );
+    leads_new->append_row( samples->get_col(7) );
+    
+    cout << "Reconstructing " << leads_new->rows() << "," << leads_new->cols()  << endl;
 
+    // Reconstruction
+    fastica_train_reconstruct = new Fast_ICA(*leads_new);
+    fastica_train_reconstruct->set_nrof_independent_components(3); 
+    //fastica_train_reconstruct.set_approach(FICA_APPROACH_DEFL);
+    fastica_train_reconstruct->set_init_guess(A_initial);
+    fastica_train_reconstruct->separate();    
+    
+    ICs_current = fastica_train_reconstruct->get_independent_components();
+    
+    A_current = fastica_train_reconstruct->get_mixing_matrix();
+    leads_reconst = (reconst_transform * ICs_current).T();    
+
+    cout << "Writing recostructed leads to file" << endl;    
+
+    // Output reconstructed leads to file
+    for ( rows = 0; rows < leads_reconst.rows(); rows++ )
+    {
+      for ( cols = 0; cols < leads_reconst.cols(); cols++ )
+      {
+        fprintf(fp_out, "%.3f,", leads_reconst.get(rows,cols) );
+      }
+      fprintf(fp_out, "\n" );
+    }
+    
+    delete fastica_train_reconstruct;
+    
+    // Free up memory used by the samples matrix
+    delete samples;
+    samples = new mat;
+    
+    // Free up memory used by the samples matrix
+    delete leads_new;
+    leads_new = new mat;
+  }
+  
+  // Close input file
+  fclose(fp_in);
+  
   // Close output file
   fclose(fp_out);
   
@@ -168,6 +180,7 @@ int main( int32_t argc, char *argv[] )
 
   // Cleanup  
   delete samples;
+  delete leads_new;
 
   return 0;
 
@@ -175,9 +188,9 @@ int main( int32_t argc, char *argv[] )
 
 
 /*******************************************************************************
- * @fn    void parse_line ( char* csv_line, int8_t* output_line )
+ * @fn    void parse_line ( char* csv_line, mat* output_line )
  *
- * @brief Parse line from csv file an populate array row with contents
+ * @brief Parse line from csv file an populate vector with contents
  * ****************************************************************************/
 void parse_line ( char* csv_line, mat* output_line )
 {
@@ -198,12 +211,11 @@ void parse_line ( char* csv_line, mat* output_line )
 }
 
 /*******************************************************************************
- * @fn    uint8_t parse_table ( FILE* fp_csv_file, 
- *                                      int8_t p_value_table[][MAX_DEVICES+1] )
+ * @fn    int parse_table ( FILE* fp_csv_file, mat* p_value_table )
  *
- * @brief Read lines from CSV file and parse them until an empty line is found
+ * @brief Read (up to MAX_SAMPLES)lines from CSV file and parse them
  * ****************************************************************************/
-uint8_t parse_table ( FILE* fp_csv_file, mat* p_value_table )
+int parse_table ( FILE* fp_csv_file, mat* p_value_table )
 {
   char csv_line[INBUFSIZE];   // Buffer for reading a line in the file
   uint16_t line_index = 0;
@@ -217,8 +229,10 @@ uint8_t parse_table ( FILE* fp_csv_file, mat* p_value_table )
     // Parse csv line and populate array
     parse_line( csv_line, p_value_table );         
     
+    // Keep track of how many lines have been read
     line_index++;
     
+    // Stop reading
     if( line_index >= MAX_SAMPLES )
     {
       return 1;
