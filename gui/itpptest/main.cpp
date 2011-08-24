@@ -116,7 +116,9 @@ int main( int32_t argc, char *argv[] )
   {
     printf( "Error opening output file.\r\n" );
     return 1;
-  }   
+  }
+  
+  fclose(fp_out);
   
   // Free up memory used by the samples matrix
   delete samples;
@@ -127,6 +129,7 @@ int main( int32_t argc, char *argv[] )
   // Read in CSV file and populate samples matrix
   while( parse_table(fp_in, samples) )
   {  
+    
     
     // Leads I(0),II(1), and V2(7)
     leads_new->append_row( samples->get_col(0) );
@@ -149,6 +152,15 @@ int main( int32_t argc, char *argv[] )
 
     cout << "Writing recostructed leads to file" << endl;    
 
+    // Open input csv file
+    fp_out = fopen( argv[3], "a" );
+    
+    if( NULL == fp_out )
+    {
+      printf( "Error opening output file.\r\n" );
+      return 1;
+    }
+
     // Output reconstructed leads to file
     for ( rows = 0; rows < leads_reconst.rows(); rows++ )
     {
@@ -158,6 +170,8 @@ int main( int32_t argc, char *argv[] )
       }
       fprintf(fp_out, "\n" );
     }
+    
+    fclose(fp_out);
     
     delete fastica_train_reconstruct;
     
@@ -172,9 +186,6 @@ int main( int32_t argc, char *argv[] )
   
   // Close input file
   fclose(fp_in);
-  
-  // Close output file
-  fclose(fp_out);
   
   cout << "done" << endl;
 
