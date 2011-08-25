@@ -1,5 +1,8 @@
 #include <itpp/itbase.h>
 #include <itpp/signal/fastica.h>
+#include <itpp/signal/sigfun.h>
+#include <itpp/base/math/misc.h>
+#include <itpp/itstat.h>
 #include <iostream>
 
 using namespace itpp;
@@ -27,6 +30,8 @@ int main( int32_t argc, char *argv[] )
   mat ICs_current;
   mat A_current;
   mat leads_reconst;
+    
+  vec *temp;
   
   Fast_ICA *fastica_train_reconstruct;
   
@@ -83,12 +88,14 @@ int main( int32_t argc, char *argv[] )
   leads_to_reconstruct.append_row( samples->get_col(14) );
 
   
+  cout << "Training." << endl;
+  
   //
   // Begin ICA training
   //  
   Fast_ICA fastica_train(leads_initial); 
   fastica_train.set_nrof_independent_components(3);
-  //fastica_train.set_approach(FICA_APPROACH_DEFL);
+  fastica_train.set_approach(FICA_APPROACH_DEFL);
   fastica_train.separate();  
   ICs_initial = fastica_train.get_independent_components();  
   A_initial = fastica_train.get_mixing_matrix();
@@ -99,7 +106,8 @@ int main( int32_t argc, char *argv[] )
   reconst_transform = leads_to_reconstruct * ICs_initial.T() *
                                   inv( ICs_initial * ICs_initial.T() );
                                   
-      
+  cout << "Done training." << endl;
+        
   // Open input csv file
   fp_in = fopen( argv[2], "r" );
   
@@ -128,6 +136,7 @@ int main( int32_t argc, char *argv[] )
   
   // Read in CSV file and populate samples matrix
   while( parse_table(fp_in, samples) )
+  //parse_table(fp_in, samples);
   {  
     
     
@@ -141,14 +150,102 @@ int main( int32_t argc, char *argv[] )
     // Reconstruction
     fastica_train_reconstruct = new Fast_ICA(*leads_new);
     fastica_train_reconstruct->set_nrof_independent_components(3); 
-    //fastica_train_reconstruct.set_approach(FICA_APPROACH_DEFL);
+    //fastica_train_reconstruct->set_approach(FICA_APPROACH_DEFL);
     fastica_train_reconstruct->set_init_guess(A_initial);
     fastica_train_reconstruct->separate();    
     
     ICs_current = fastica_train_reconstruct->get_independent_components();
     
-    A_current = fastica_train_reconstruct->get_mixing_matrix();
-    leads_reconst = (reconst_transform * ICs_current).T();    
+    //A_current = fastica_train_reconstruct->get_mixing_matrix();
+    
+    //
+    // Sort ICs
+    //
+    
+    
+    int temp_ind;
+    double temp_value;
+    
+    mat ind_max;
+    vec tmp_vector(2);
+    
+    int perm_sel;
+    
+    mat *sort_tran;
+    
+    vec cov_values(3);
+    
+    mat ICs_sorted;
+    
+    mat IC_perms("0 0 1 1 2 2;1 2 0 2 0 1;2 1 2 0 1 0");
+    
+    mat neg_trans;
+    
+
+    
+    for( int i = 0; i < 6; i++)
+    {
+      temp = new vec(2*MAX_SAMPLES-1);
+      temp->zeros();
+      for( int j = 0; j < 3; j++ )
+      {
+        *temp +=  abs( xcorr( (ICs_initial.get_row(j)-mean(ICs_initial.get_row(j)))
+          ,( ICs_current.get_row(IC_perms(j,i))-mean(ICs_current.get_row( IC_perms(j,i))))));
+          
+          //cout << "IC_perms("<<i<<","<<j<<")" << IC_perms(j,i) << endl;
+      }
+      
+      temp_value = max(*temp, temp_ind);
+
+      tmp_vector[0] = temp_value;
+      tmp_vector[1] = temp_ind;            
+      
+      ind_max.append_row( tmp_vector );
+      
+      delete temp;
+    }
+    
+    ind_max.set(0,0, 1.25 * ind_max(0,0) );
+    
+    max( ind_max.get_col(0), perm_sel );
+    
+    sort_tran = new mat(3,3);
+    sort_tran->zeros();
+    
+    for ( int i = 0; i < 3; i++ )
+    {
+      sort_tran->set(IC_perms(perm_sel,i),i, 1);
+      temp = new vec;
+      *temp = xcorr( 
+        (ICs_initial.get_row(i)-mean(ICs_initial.get_row(i))),
+        (ICs_current.get_row(IC_perms(i,perm_sel))-mean(ICs_current.get_row( IC_perms(i,perm_sel)))) );
+              
+      cov_values[i]=(*temp)[(int)ind_max(perm_sel,1)];
+      
+      delete temp;
+    }
+    
+    
+    
+    neg_trans = eye(3);
+    
+    for( int i = 0; i < 3; i++ )
+    {
+      if ( cov_values[i] < 0 )
+      {
+        neg_trans.set(i,i,-1);
+      }
+      else
+      {
+        neg_trans.set(i,i,1);
+      }
+    }
+    
+    ICs_sorted = neg_trans * (*sort_tran) * ICs_current;
+    
+    delete sort_tran;
+    
+    leads_reconst = (reconst_transform * ICs_sorted).T();    
 
     cout << "Writing recostructed leads to file" << endl;    
 
