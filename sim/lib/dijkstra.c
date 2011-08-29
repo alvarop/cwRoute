@@ -125,7 +125,7 @@ energy_t initialize_node_energy( uint8_t source_id )
         p_node->energy = s_links.links[link_index].links_power;
         s_mean_energy += p_node->energy;
 #ifdef DEBUG_ON
-  //printf("(%f)", p_node->energy);
+  //printf("(%g)", p_node->energy);
 #endif
       }
 #ifdef DEBUG_ON
@@ -138,7 +138,7 @@ energy_t initialize_node_energy( uint8_t source_id )
   s_mean_energy /= (s_nodes.current_nodes - 1 - s_nodes.current_relays);
 
 #ifdef DEBUG_ON
-  //printf("Mean Energy: %f\n", s_mean_energy);
+  //printf("Mean Energy: %g\n", s_mean_energy);
 #endif
   
   return s_mean_energy;
@@ -170,7 +170,7 @@ energy_t compute_mean_energy( uint8_t source_id )
   {
     if( s_nodes.nodes[node_index].id != source_id )
     {
-      s_nodes.nodes[node_index].energy -= s_mean_energy;
+      //s_nodes.nodes[node_index].energy -= s_mean_energy;
     }
   }  
   
@@ -192,7 +192,7 @@ void calculate_link_costs()
     
     s_links.links[link_index].current_cost -= s_mean_energy;
       
-      //printf("{%f}(%f)[%f]\n",
+      //printf("{%g}(%g)[%g]\n",
       //find_node(s_links.links[link_index].source)->energy,
       //s_mean_energy,
       //s_links.links[link_index].current_cost);
@@ -493,7 +493,7 @@ void print_shortest_path( uint8_t node_id )
     print_node_name( p_node->id );
     while( p_node->p_previous != p_node )
     {         
-      printf("-(%d)",
+      printf("-(%g)",
               find_link( p_node->p_previous->id, p_node->id )->links_power);
       p_node = p_node->p_previous;
       printf("->");
@@ -576,7 +576,7 @@ void print_all_links()
   {
     print_link( &s_links.links[link_index] );
 
-    printf( " %d\n", s_links.links[link_index].current_cost );
+    printf( " %g\n", s_links.links[link_index].current_cost );
   
     
   }
@@ -601,13 +601,13 @@ void print_node_energy( uint8_t source_id, FILE* fp_out )
     
   //printf("\n");
   
-  fprintf( fp_out, "%d,", s_mean_energy );
+  fprintf( fp_out, "%g,", s_mean_energy );
   
   for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
   { 
     if( s_nodes.nodes[node_index].id != source_id )
     {   
-      fprintf(fp_out, "%d,", s_nodes.nodes[node_index].energy );
+      fprintf(fp_out, "%g,", s_nodes.nodes[node_index].energy );
     }      
   }
   
@@ -695,7 +695,7 @@ void generate_graph( uint8_t source_id, uint32_t file_number )
       }
       
       fprintf( f_graph, "[ label=\"");
-      fprintf( f_graph,  "%d", s_links.links[link_index].links_power );
+      fprintf( f_graph,  "%g", s_links.links[link_index].links_power );
       fprintf( f_graph, "\" ]");
       fprintf( f_graph,  ";\n" );
     }
@@ -703,7 +703,7 @@ void generate_graph( uint8_t source_id, uint32_t file_number )
     // print_node_name to file
     for( node_index = 0; node_index < node_info_index; node_index++ )
     {
-      fprintf( f_graph, "%s [label=\"%s\\n(%d)\"];", node_info[node_index].label,
+      fprintf( f_graph, "%s [label=\"%s\\n(%g)\"];", node_info[node_index].label,
         node_info[node_index].label, 
         find_node(node_info[node_index].id)->energy );
     }

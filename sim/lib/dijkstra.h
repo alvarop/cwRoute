@@ -13,7 +13,7 @@
 
 // Use type definition since actual datatype might change
 // (don't want to use floating point on the microcontroller...)
-typedef int32_t energy_t ;
+typedef double energy_t ;
 
 typedef struct node_s node_t;
 typedef struct link_s link_t;
