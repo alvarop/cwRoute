@@ -18,6 +18,34 @@ static FILE* main_fp;
 // Table with all the RSSIs from all devices. This is sent back to the host.
 static volatile uint8_t rssi_table[MAX_DEVICES+1][MAX_DEVICES+1];
 
+static const double rssi_values[256] = {
+-72.0,-71.5,-71.0,-70.5,-70.0,-69.5,-69.0,-68.5,-68.0,-67.5,-67.0,
+-66.5,-66.0,-65.5,-65.0,-64.5,-64.0,-63.5,-63.0,-62.5,-62.0,
+-61.5,-61.0,-60.5,-60.0,-59.5,-59.0,-58.5,-58.0,-57.5,-57.0,
+-56.5,-56.0,-55.5,-55.0,-54.5,-54.0,-53.5,-53.0,-52.5,-52.0,
+-51.5,-51.0,-50.5,-50.0,-49.5,-49.0,-48.5,-48.0,-47.5,-47.0,
+-46.5,-46.0,-45.5,-45.0,-44.5,-44.0,-43.5,-43.0,-42.5,-42.0,
+-41.5,-41.0,-40.5,-40.0,-39.5,-39.0,-38.5,-38.0,-37.5,-37.0,
+-36.5,-36.0,-35.5,-35.0,-34.5,-34.0,-33.5,-33.0,-32.5,-32.0,
+-31.5,-31.0,-30.5,-30.0,-29.5,-29.0,-28.5,-28.0,-27.5,-27.0,
+-26.5,-26.0,-25.5,-25.0,-24.5,-24.0,-23.5,-23.0,-22.5,-22.0,
+-21.5,-21.0,-20.5,-20.0,-19.5,-19.0,-18.5,-18.0,-17.5,-17.0,
+-16.5,-16.0,-15.5,-15.0,-14.5,-14.0,-13.5,-13.0,-12.5,-12.0,
+-11.5,-11.0,-10.5,-10.0,-9.5,-9.0,-8.5,-136.0,-135.5,-135.0,
+-134.5,-134.0,-133.5,-133.0,-132.5,-132.0,-131.5,-131.0,-130.5,-130.0,
+-129.5,-129.0,-128.5,-128.0,-127.5,-127.0,-126.5,-126.0,-125.5,-125.0,
+-124.5,-124.0,-123.5,-123.0,-122.5,-122.0,-121.5,-121.0,-120.5,-120.0,
+-119.5,-119.0,-118.5,-118.0,-117.5,-117.0,-116.5,-116.0,-115.5,-115.0,
+-114.5,-114.0,-113.5,-113.0,-112.5,-112.0,-111.5,-111.0,-110.5,-110.0,
+-109.5,-109.0,-108.5,-108.0,-107.5,-107.0,-106.5,-106.0,-105.5,-105.0,
+-104.5,-104.0,-103.5,-103.0,-102.5,-102.0,-101.5,-101.0,-100.5,-100.0,
+-99.5,-99.0,-98.5,-98.0,-97.5,-97.0,-96.5,-96.0,-95.5,-95.0,
+-94.5,-94.0,-93.5,-93.0,-92.5,-92.0,-91.5,-91.0,-90.5,-90.0,
+-89.5,-89.0,-88.5,-88.0,-87.5,-87.0,-86.5,-86.0,-85.5,-85.0,
+-84.5,-84.0,-83.5,-83.0,-82.5,-82.0,-81.5,-81.0,-80.5,-80.0,
+-79.5,-79.0,-78.5,-78.0,-77.5,-77.0,-76.5,-76.0,-75.5,-75.0,
+-74.5,-74.0,-73.5,-73.0,-72.5, };
+
 int main( int argc, char *argv[] )
 {   
   uint8_t serial_buffer[BUFFER_SIZE]; 
@@ -26,7 +54,7 @@ int main( int argc, char *argv[] )
   //uint8_t adc_sample_buffer[ADC_MAX_SAMPLES];    
   uint16_t buffer_offset = 0;
   uint8_t new_packet = 0;
-  uint16_t buffer_index;
+ 
   uint16_t bytes_read = 0;  
   
   // Handle interrupt events to make sure files are closed before exiting
@@ -131,7 +159,7 @@ void process_packet( uint8_t* buffer )
   
   for( col_index = 0; col_index <= MAX_DEVICES; col_index++ )
   {
-    printf(" %3d ", col_index );
+    printf(" %3d   ", col_index );
   }
   
   printf("\r\n");
@@ -143,12 +171,12 @@ void process_packet( uint8_t* buffer )
     
     for( col_index = 0; col_index < MAX_DEVICES; col_index++ )
     {
-      printf("%+4d ", (int8_t)rssi_table[row_index][col_index] );
-      fprintf( main_fp, "%d,", (int8_t)rssi_table[row_index][col_index] );
+      printf("%06.1f ", rssi_values[rssi_table[row_index][col_index]]  );
+      fprintf( main_fp, "%d,", rssi_table[row_index][col_index] );
     }
     
-    printf("%+4d", (int8_t)rssi_table[row_index][col_index] );
-    fprintf( main_fp, "%d", (int8_t)rssi_table[row_index][col_index] );
+    printf("%06.1f ", rssi_values[rssi_table[row_index][col_index]]  );
+    fprintf( main_fp, "%d", rssi_table[row_index][col_index] );
     
     printf("\r\n");
     fprintf( main_fp, "\n" );
