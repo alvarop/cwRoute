@@ -1,4 +1,4 @@
-Compile: gcc -Wall rs232.c main.c -orssistream
+Compile: gcc -Wall -I../lib/ ../lib/rs232.c main.c -orssistream
 Run: ./rssistream 16 115200
 16 - /dev/ttyUSB0
 17 - /dev/ttyUSB1
