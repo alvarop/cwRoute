@@ -16,6 +16,7 @@ static int32_t serial_port_number;
 static FILE* main_fp;
 
 volatile uint8_t send_message = 1;
+volatile uint8_t next_power = 0xff;
 
   
 
@@ -37,7 +38,7 @@ int main( int argc, char *argv[] )
   (void) signal( SIGINT, sigint_handler );
 
   tx_power = dbm_to_watt(1l);
-  target_rssi = dbm_to_watt(-80l);
+  target_rssi = dbm_to_watt(-75l);
 
   // Make sure input is correct
   if( argc < 2 )
@@ -124,7 +125,7 @@ int main( int argc, char *argv[] )
     usleep(20000);
     if( 0 == send_message-- )
     {
-      SendByte( serial_port_number, 0xFF ); // Send initial packet
+      SendByte( serial_port_number, next_power ); // Send initial packet
       send_message = 2;
     }
   }  
@@ -134,15 +135,19 @@ int main( int argc, char *argv[] )
 
 void process_packet( uint8_t* buffer )
 {
+  tx_power = dbm_to_watt(rssi_values[buffer[0]]);
+  
   // Compute alpha by dividing received rssi over transmit power  
-  double alpha = dbm_to_watt(rssi_values[buffer[0]])/tx_power;
+  double alpha = dbm_to_watt(rssi_values[buffer[2]])/tx_power;
   
   // Compute required power by dividing target_rssi by alpha
   double required_power = watt_to_dbm(target_rssi/alpha);
   
-  printf("Incoming RSSI %0.1f. Could use %0.1f to meet %0.1f rssi [0x%02X]\n", 
-          rssi_values[buffer[0]], required_power, watt_to_dbm(target_rssi),
-          find_closest_power(required_power));
+  printf("Incoming RSSI %0.1f. Trying %0.1f to meet %0.1f rssi [0x%02X] Actual rssi: %0.1f\n", 
+          rssi_values[buffer[2]], required_power, watt_to_dbm(target_rssi),
+          find_closest_power(required_power), rssi_values[buffer[1]]);
+  
+  next_power = find_closest_power(required_power);
   //SendByte( serial_port_number, 0x00 );
 
   return;
