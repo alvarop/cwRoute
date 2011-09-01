@@ -35,7 +35,6 @@ struct node_s
 struct link_s
 {
   energy_t links_power;   // Constant (how much power does the link require)
-  energy_t current_cost;  // Relative to mean
   uint8_t source;         // 
   uint8_t destination;    //
   uint8_t active;         //
@@ -56,7 +55,6 @@ typedef struct
 
 uint8_t add_node( uint8_t, uint8_t );
 uint8_t add_link( uint8_t, uint8_t, energy_t );
-void calculate_link_costs();
 energy_t initialize_node_energy( uint8_t source_id );
 energy_t compute_mean_energy( uint8_t source_id );
 uint8_t dijkstra( uint8_t );

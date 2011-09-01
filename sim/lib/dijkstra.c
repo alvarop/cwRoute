@@ -15,6 +15,8 @@ static links_t s_links;
 
 static energy_t s_mean_energy;
 
+uint32_t current_round;
+
 node_t* find_node( uint8_t );
 node_t* node_with_smallest_distance( );
 link_t* find_link( uint8_t, uint8_t );
@@ -75,15 +77,6 @@ uint8_t add_link( uint8_t source, uint8_t destination, energy_t link_power )
     new_link->source = source;
     new_link->destination = destination;
 
-    // Link cost to be computed later for modified Dijkstra's algorithm
-    new_link->current_cost = 0;
-
-
-#ifdef REGULAR_DIJKSTRA
-    // Static link cost for regular Dijkstra's algorithm
-    new_link->current_cost = link_power;   
-#endif    
-
     // Disable link if the power required is maximum
     if( link_power == MAX_DISTANCE )
     {
@@ -110,6 +103,8 @@ energy_t initialize_node_energy( uint8_t source_id )
 {  
   node_t* p_node;
   uint8_t link_index;
+  
+  current_round = 1;
   
   for( link_index = 0; link_index < s_links.current_links; link_index++ )
   {
@@ -166,38 +161,15 @@ energy_t compute_mean_energy( uint8_t source_id )
   s_mean_energy /= (s_nodes.current_nodes - 1);
     
   // Subtract mean energy from node energy to 'equalize' and avoid overflows
-  for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
+/*  for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
   {
     if( s_nodes.nodes[node_index].id != source_id )
     {
-      //s_nodes.nodes[node_index].energy -= s_mean_energy;
+      s_nodes.nodes[node_index].energy -= s_mean_energy;
     }
-  }  
+  }  */
   
   return s_mean_energy;
-}
-
-//
-// Compute link costs
-//
-void calculate_link_costs()
-{
-  uint8_t link_index;
-  
-  for( link_index = 0; link_index < s_links.current_links; link_index++ )
-  {
-    s_links.links[link_index].current_cost = 
-        s_links.links[link_index].links_power +
-        find_node(s_links.links[link_index].destination)->energy;
-    
-    s_links.links[link_index].current_cost -= s_mean_energy;
-      
-      //printf("{%g}(%g)[%g]\n",
-      //find_node(s_links.links[link_index].source)->energy,
-      //s_mean_energy,
-      //s_links.links[link_index].current_cost);
-      
-  }
 }
 
 //
@@ -294,6 +266,10 @@ uint8_t dijkstra( uint8_t source_id )
   link_t* p_current_link;
   
   energy_t possible_distance;
+  energy_t current_cost;
+  
+  // Update round count
+  current_round += 1;
 
 #ifdef DEBUG_D_ON
   //printf("Initialize s_nodes.\n"); // DEBUG
@@ -399,11 +375,19 @@ uint8_t dijkstra( uint8_t source_id )
         // Make sure we don't go backwards
         if( ! p_destination_node->visited )       
         {
+          // Calculate the current cost of the link
+          current_cost = p_source_node->energy + p_current_link->links_power;
+          current_cost /= current_round;          
+          current_cost += s_mean_energy /( current_round - 1 );
+          
+#ifdef REGULAR_DIJKSTRA
+          current_cost = p_current_link->links_power;
+#endif
+        
           //    
           // Compute the possible distance for destination if current link is used
           //
-          possible_distance = p_source_node->distance +
-                                p_current_link->current_cost;
+          possible_distance = p_source_node->distance + current_cost;
           
           //
           // If possible distance is smaller than current one, update destination
@@ -576,7 +560,7 @@ void print_all_links()
   {
     print_link( &s_links.links[link_index] );
 
-    printf( " %g\n", s_links.links[link_index].current_cost );
+    printf( " %g\n", s_links.links[link_index].links_power );
   
     
   }
