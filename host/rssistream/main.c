@@ -18,6 +18,12 @@ static FILE* main_fp;
 // Table with all the RSSIs from all devices. This is sent back to the host.
 static volatile uint8_t rssi_table[MAX_DEVICES+1][MAX_DEVICES+1];
 
+// Table storing all device transmit powers
+static volatile uint8_t power_table[MAX_DEVICES];
+
+// Table storing all device routes
+static volatile uint8_t routing_table[MAX_DEVICES];
+
 static const double rssi_values[256] = {
 -72.0,-71.5,-71.0,-70.5,-70.0,-69.5,-69.0,-68.5,-68.0,-67.5,-67.0,
 -66.5,-66.0,-65.5,-65.0,-64.5,-64.0,-63.5,-63.0,-62.5,-62.0,
@@ -46,16 +52,24 @@ static const double rssi_values[256] = {
 -79.5,-79.0,-78.5,-78.0,-77.5,-77.0,-76.5,-76.0,-75.5,-75.0,
 -74.5,-74.0,-73.5,-73.0,-72.5, };
 
+void send_serial_message( uint8_t* packet_buffer, int16_t buffer_size );
+
 int main( int argc, char *argv[] )
 {   
   uint8_t serial_buffer[BUFFER_SIZE]; 
   uint8_t packet_buffer[BUFFER_SIZE];
-  uint8_t final_buffer[BUFFER_SIZE];  
-  //uint8_t adc_sample_buffer[ADC_MAX_SAMPLES];    
+  uint8_t final_buffer[BUFFER_SIZE];
+  uint8_t tx_buffer[BUFFER_SIZE];  
+  
   uint16_t buffer_offset = 0;
   uint8_t new_packet = 0;
  
   uint16_t bytes_read = 0;  
+  
+  memset((uint8_t*)power_table, 0xff, sizeof(power_table));
+  memset((uint8_t*)routing_table, (MAX_DEVICES+1), sizeof(routing_table));
+  
+  routing_table[0] = 3; // route device 1 through device 3
   
   // Handle interrupt events to make sure files are closed before exiting
   (void) signal( SIGINT, sigint_handler );
@@ -134,6 +148,9 @@ int main( int argc, char *argv[] )
           
           new_packet = 0;
           memset( packet_buffer, 0x00, sizeof(packet_buffer) );
+          
+          // send new routing table
+          send_serial_message( (uint8_t *)routing_table, sizeof(routing_table) );
         }      
 
       }
@@ -142,6 +159,7 @@ int main( int argc, char *argv[] )
     
     // Don't take up all the processor time    
     usleep(20000);
+    //
 
   }  
 
@@ -152,7 +170,7 @@ void process_packet( uint8_t* buffer )
 {
   uint8_t row_index;
   uint8_t col_index;
-  
+    
   memcpy( rssi_table, buffer, sizeof(rssi_table) );
   
   printf("   ");
@@ -263,6 +281,37 @@ uint16_t find_and_escape_packet( uint8_t* old_buffer, uint8_t* new_buffer )
     return 0;
   }
   return packet_size;  
+}
+
+/*!
+  @brief Set-up outgoing packet's address and am_type
+*/
+void send_serial_message( uint8_t* packet_buffer, int16_t buffer_size )
+{
+  uint8_t p_tmp_buffer[BUFFER_SIZE];
+  uint8_t total_size = 0;
+  uint8_t buffer_index = 0;
+ 
+  // Add start character
+  p_tmp_buffer[total_size++] = SYNC_BYTE; 
+   
+  for(; buffer_size > 0; buffer_size-- )
+  {
+    if( ( SYNC_BYTE == packet_buffer[buffer_index] ) || 
+        ( ESCAPE_BYTE == packet_buffer[buffer_index] ) )
+    {
+      p_tmp_buffer[total_size++] = ESCAPE_BYTE;
+      p_tmp_buffer[total_size++] = packet_buffer[buffer_index++] ^ 0x20;
+    }
+    else
+    {
+      p_tmp_buffer[total_size++] = packet_buffer[buffer_index++];
+    }
+  }
+  
+  p_tmp_buffer[total_size++] = SYNC_BYTE;
+  
+  SendBuf(serial_port_number, p_tmp_buffer, total_size);
 }
 
 /*!
