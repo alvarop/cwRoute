@@ -442,6 +442,20 @@ void compute_shortest_path( uint8_t node_id )
   }
 }
 
+void compute_route_table( uint8_t* route_table )
+{
+  uint8_t node_id;
+  node_t* p_node;
+  
+  for( node_id = 1; node_id < s_nodes.current_nodes; node_id++ )
+  {
+    p_node = find_node( node_id );
+    route_table[node_id-1] = p_node->p_previous->id;
+  }
+  
+  return;
+}
+
 #ifdef DEBUG_ON
 //
 // Debugging functions
