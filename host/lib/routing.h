@@ -8,7 +8,8 @@
 #define _ROUTING_H
 #include <pthread.h>
 
-pthread_mutex_t mutex_route;
+pthread_mutex_t mutex_route_start;
+pthread_mutex_t mutex_route_done;
 
 #ifndef MAX_DEVICES
 #define MAX_DEVICES (3)
@@ -79,7 +80,7 @@ static const double power_values[] = {
 -0.80, -0.60, -0.40, -0.20, -0.10, +0.00, +0.30, +0.70, +1.10, +1.50 };
 
 void routing_initialize();
-void *compute_routes_thread();
+void *compute_routes_thread( void* );
 uint8_t parse_table ( uint8_t p_rssi_table[][MAX_DEVICES+1] );
 
 #endif /*_ROUTING_H */

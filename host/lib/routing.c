@@ -25,6 +25,8 @@ double watt_to_dbm( double power );
 energy_t target_rssi;
 energy_t rssi_table[MAX_DEVICES+1][MAX_DEVICES+1];
 
+#define AP_NODE_ID (MAX_DEVICES+1)
+
 void routing_initialize()
 {    
   char node_id_string[3];
@@ -33,18 +35,22 @@ void routing_initialize()
   target_rssi = dbm_to_watt(-75l);
   
   // Add nodes 
-  for( node_index = 0; node_index < (MAX_DEVICES + 1); node_index++ )
+  sprintf( node_id_string, "AP" );
+  add_labeled_node( AP_NODE_ID, 0, node_id_string );
+  
+  for( node_index = 1; node_index < (MAX_DEVICES + 1); node_index++ )
   {
     sprintf( node_id_string, "%d", node_index );
     add_labeled_node( node_index, 0, node_id_string );
   }
   
-  pthread_mutex_init( &mutex_route, NULL );
+  pthread_mutex_init( &mutex_route_start, NULL );
+  pthread_mutex_init( &mutex_route_done, NULL );
   
   // Start mutex locked
-  pthread_mutex_lock ( &mutex_route );
+  pthread_mutex_lock ( &mutex_route_start );
   
-  initialize_node_energy( 0 );
+  initialize_node_energy( AP_NODE_ID );
   
   //print_node_energy( 0, fp_out );
   
@@ -53,7 +59,7 @@ void routing_initialize()
   return;
 }
 
-void *compute_routes_thread()
+void *compute_routes_thread( void *route_table )
 {
   static uint32_t index;
   uint8_t node_index;
@@ -61,17 +67,15 @@ void *compute_routes_thread()
   for (;;)
   {
     // Block until next table is ready
-    pthread_mutex_lock ( &mutex_route );
-    
-    
-    
+    pthread_mutex_lock ( &mutex_route_start );
+            
     // Assuming rssi_table has been updated
     clean_table( rssi_table );       
 
     add_links_from_table( rssi_table );
     
     // Run dijkstra's algorithm with 0 being the access point
-    dijkstra( 0 );
+    dijkstra( AP_NODE_ID );
     
     // Display shortest paths and update energies
     for( node_index = 1; node_index < (MAX_DEVICES + 1); node_index++ )
@@ -80,18 +84,23 @@ void *compute_routes_thread()
       print_shortest_path( node_index );
     }
     
+    // Compute routing table
+    compute_route_table( route_table );
+    
     //print_all_links();
     
     // Compute engergy mean and subtract from each individual mean
-    compute_mean_energy( 0 );    
-  
-    
+    compute_mean_energy( AP_NODE_ID );    
+     
     //print_node_energy( 0, fp_out );
     
     //generate_graph( 0, index );
     
     index++;
     printf("\nRound %d\n", index);
+    
+    // Block until next table is ready
+    pthread_mutex_unlock ( &mutex_route_done );
 
   }
 
@@ -157,7 +166,7 @@ void clean_table( energy_t rssi_table[][MAX_DEVICES+1] )
  * ****************************************************************************/
 void add_links_from_table( energy_t rssi_table[][MAX_DEVICES+1] )
 {
-  uint16_t col_index, row_index;
+  uint16_t col_index, row_index, source, destination;
   energy_t link_power;
   energy_t tx_power;
   energy_t alpha;
@@ -176,8 +185,21 @@ void add_links_from_table( energy_t rssi_table[][MAX_DEVICES+1] )
       // Transmit power required is the target rssi / channel attenuation
       link_power = target_rssi / alpha;
       
+      source = row_index;      
+      destination = col_index;
+      
+      // Make sure the access point has the correct address
+      if( 0 == source )
+      {
+        source = AP_NODE_ID;
+      }    
+      if( 0 == destination )
+      {
+        destination = AP_NODE_ID;
+      }
+      
       // Add link
-      add_link( row_index, col_index, link_power );
+      add_link( source, destination, link_power );
     }
   }
 }
@@ -216,6 +238,41 @@ void print_rssi_table()
 
   printf("\r\n");
   //fprintf( main_fp, "\n" );
+}
+
+/*******************************************************************************
+ * @fn    uint8_t find_closest_power( double power )
+ *
+ * @brief Get a desired tx power in RSSI and returns radio register setting that
+ *        matches as close as possible.
+ * ****************************************************************************/
+uint8_t find_closest_power( double power )
+{
+  uint8_t min_index = 0;
+  uint8_t index;
+  double min_value = 1e99;
+  double difference;
+
+  // The current power calculation method is off, here's an attempt to 
+  // compensate for that
+  //power += POWER_CALIBRATION_FACTOR;
+
+  for( index = 0; index < (sizeof(power_values)/sizeof(double)); index++ )
+  {
+    
+    difference = fabs( power - power_values[index] );
+      
+    if ( difference < min_value )
+    {
+      min_value = difference;
+      min_index = index;
+    }
+
+  }
+  
+  //printf("%+0.1f", power_values[min_index]);
+  
+  return power_settings[min_index];
 }
 
 /*******************************************************************************

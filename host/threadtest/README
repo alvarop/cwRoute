@@ -1,4 +1,4 @@
-Compile: gcc -Wall -pthread -lm -I../../sim/lib/ -I../lib/ -DMAX_DEVICES=3 ../../sim/lib/dijkstra.c ../lib/rs232.c ../lib/routing.c ../lib/serial.c main.c -othreadtest
+Compile: gcc -Wall -pthread -lm -I../../sim/lib/ -I../lib/ -DMAX_DEVICES=3 -DDEBUG_ON ../../sim/lib/dijkstra.c ../lib/rs232.c ../lib/routing.c ../lib/serial.c main.c -othreadtest
 Run: ./threadtest 16 115200
 16 - /dev/ttyUSB0
 17 - /dev/ttyUSB1

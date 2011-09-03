@@ -53,6 +53,10 @@ int main( int argc, char *argv[] )
     exit(-1);
   }
   
+  // Initialize routing an power tables
+  memset( (uint8_t*)power_table, 0xff, sizeof(power_table) );
+  memset( (uint8_t*)routing_table, ( MAX_DEVICES + 1 ), sizeof(routing_table) );
+  
   routing_initialize();
   
   rc = pthread_create( &serial_thread, NULL, serial_read_thread, NULL );
@@ -63,7 +67,8 @@ int main( int argc, char *argv[] )
     exit(-1);
   }
   
-  rc = pthread_create( &routing_thread, NULL, compute_routes_thread, NULL );
+  rc = pthread_create( &routing_thread, NULL, compute_routes_thread, 
+                                                        (void*) routing_table );
   
   if (rc)
   {
@@ -73,8 +78,20 @@ int main( int argc, char *argv[] )
   
   for(;;)
   {
-    // Do nothing
-    sleep(1);
+    //uint8_t index;
+    
+    // Wait until routing is done
+    pthread_mutex_lock ( &mutex_route_done );
+  
+    // Send new routes to AP
+    send_serial_message( (uint8_t *)routing_table, sizeof(routing_table) );
+    
+    // Print routes
+    //for( index = 0; index < MAX_DEVICES; index++ )
+    //{
+    //  printf( "%d->%d ", index+1, routing_table[index] );
+    //}
+    //printf("\n");
   }
     
   
@@ -100,7 +117,7 @@ void process_packet( uint8_t* buffer, uint32_t size )
   parse_table( rssi_table );
   
   // Let the routing algorithm run
-  pthread_mutex_unlock ( &mutex_route );
+  pthread_mutex_unlock ( &mutex_route_start );    
   
   return;
 }
