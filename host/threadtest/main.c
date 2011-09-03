@@ -11,11 +11,24 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "serial.h"
+#include "routing.h"
 #include "main.h"
+
+#ifndef MAX_DEVICES
+#define MAX_DEVICES (3)
+#warning MAX_DEVICES not defined, defaulting to 3
+#endif
 
 void send_serial_message( uint8_t* packet_buffer, int16_t buffer_size );
 
 pthread_t serial_thread;
+pthread_t routing_thread;
+
+// Table storing all device transmit powers
+static volatile uint8_t power_table[MAX_DEVICES];
+
+// Table storing all device routes
+static volatile uint8_t routing_table[MAX_DEVICES];
 
 int main( int argc, char *argv[] )
 {   
@@ -40,11 +53,21 @@ int main( int argc, char *argv[] )
     exit(-1);
   }
   
+  routing_initialize();
+  
   rc = pthread_create( &serial_thread, NULL, serial_read_thread, NULL );
   
   if (rc)
   {
     printf("Error creating serial thread\n");
+    exit(-1);
+  }
+  
+  rc = pthread_create( &routing_thread, NULL, compute_routes_thread, NULL );
+  
+  if (rc)
+  {
+    printf("Error creating routing thread\n");
     exit(-1);
   }
   
@@ -54,8 +77,7 @@ int main( int argc, char *argv[] )
     sleep(1);
   }
     
-    
-
+  
   return 0;
 }
 
@@ -65,12 +87,20 @@ int main( int argc, char *argv[] )
  * ****************************************************************************/
 void process_packet( uint8_t* buffer, uint32_t size )
 {
-  uint16_t buffer_index;
-  for( buffer_index = 0; buffer_index < size; buffer_index++ )
+  uint8_t rssi_table[MAX_DEVICES+1][MAX_DEVICES+1]; 
+  
+  if( size < sizeof(rssi_table) )
   {
-    printf( "%02X ", buffer[buffer_index] );
+    printf( "Received packet smaller than RSSI table\r\n" );
+    return;
   }
-  printf("\r\n");
+  
+  memcpy( rssi_table, buffer, sizeof(rssi_table) );
+  
+  parse_table( rssi_table );
+  
+  // Let the routing algorithm run
+  pthread_mutex_unlock ( &mutex_route );
   
   return;
 }
@@ -83,6 +113,7 @@ void sigint_handler( int32_t sig )
 {
     
     pthread_cancel( serial_thread );
+    pthread_cancel( routing_thread );
     
     // Close the serial port
     serial_close();
