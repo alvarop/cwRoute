@@ -24,11 +24,15 @@ void send_serial_message( uint8_t* packet_buffer, int16_t buffer_size );
 pthread_t serial_thread;
 pthread_t routing_thread;
 
-// Table storing all device transmit powers
-static volatile uint8_t power_table[MAX_DEVICES];
+// Routing and power tables (all in one array)
+static volatile uint8_t rp_tables[MAX_DEVICES * 2];
 
 // Table storing all device routes
-static volatile uint8_t routing_table[MAX_DEVICES];
+static volatile uint8_t *routing_table = &rp_tables[0];
+
+// Table storing all device transmit powers
+static volatile uint8_t *power_table = &rp_tables[MAX_DEVICES];
+
 
 int main( int argc, char *argv[] )
 {   
@@ -54,8 +58,8 @@ int main( int argc, char *argv[] )
   }
   
   // Initialize routing an power tables
-  memset( (uint8_t*)power_table, 0xff, sizeof(power_table) );
-  memset( (uint8_t*)routing_table, ( MAX_DEVICES + 1 ), sizeof(routing_table) );
+  memset( (uint8_t*)power_table, 0xff, MAX_DEVICES );
+  memset( (uint8_t*)routing_table, ( MAX_DEVICES + 1 ), MAX_DEVICES );
   
   routing_initialize();
   
@@ -84,14 +88,22 @@ int main( int argc, char *argv[] )
     pthread_mutex_lock ( &mutex_route_done );
   
     // Send new routes to AP
-    send_serial_message( (uint8_t *)routing_table, sizeof(routing_table) );
+    send_serial_message( (uint8_t *)rp_tables, sizeof(rp_tables) );
     
-    // Print routes
-    //for( index = 0; index < MAX_DEVICES; index++ )
-    //{
-    //  printf( "%d->%d ", index+1, routing_table[index] );
-    //}
-    //printf("\n");
+    // Print routes and powers
+    /*
+    for( index = 0; index < MAX_DEVICES; index++ )
+    {
+      printf( "%d->%d ", index+1, routing_table[index] );
+    }
+    
+    printf("\n");
+    
+    for( index = 0; index < MAX_DEVICES; index++ )
+    {
+      printf( "%02X ", power_table[index] );
+    }
+    printf("\n");*/
   }
     
   
