@@ -18,8 +18,6 @@ static FILE* main_fp;
 volatile uint8_t send_message = 1;
 volatile uint8_t next_power = 0xff;
 
-  
-
 double tx_power;
 double target_rssi;
 
@@ -38,7 +36,7 @@ int main( int argc, char *argv[] )
   (void) signal( SIGINT, sigint_handler );
 
   tx_power = dbm_to_watt(1l);
-  target_rssi = dbm_to_watt(-75l);
+  target_rssi = dbm_to_watt(-60l);
 
   // Make sure input is correct
   if( argc < 2 )
@@ -126,7 +124,14 @@ int main( int argc, char *argv[] )
     if( 0 == send_message-- )
     {
       SendByte( serial_port_number, next_power ); // Send initial packet
-      send_message = 2;
+      send_message = 1;
+      
+      if(next_power == 0xff)
+      {
+        printf("*");
+      }
+      // If no message is received before the next round, use full power
+      next_power = 0xff;
     }
   }  
 
@@ -135,7 +140,7 @@ int main( int argc, char *argv[] )
 
 void process_packet( uint8_t* buffer )
 {
-  tx_power = dbm_to_watt(rssi_values[buffer[0]]);
+  tx_power = dbm_to_watt(power_values[buffer[0]]);
   
   // Compute alpha by dividing received rssi over transmit power  
   double alpha = dbm_to_watt(rssi_values[buffer[2]])/tx_power;
