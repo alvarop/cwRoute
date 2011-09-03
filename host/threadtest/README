@@ -1,0 +1,4 @@
+Compile: gcc -Wall -pthread -I../lib/ ../lib/rs232.c ../lib/serial.c main.c -othreadtest
+Run: ./threadtest 16 115200
+16 - /dev/ttyUSB0
+17 - /dev/ttyUSB1
