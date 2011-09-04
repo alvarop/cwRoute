@@ -174,7 +174,7 @@ double get_power_from_setting( uint8_t setting )
   printf("Power not found!\n");
   
   // In case the power isn't found, default to maximum
-  return ( sizeof(power_values) - 1 );
+  return power_values[( sizeof(power_values)/sizeof(double) - 1 )];
 }
 
 /*!
