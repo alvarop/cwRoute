@@ -9,7 +9,8 @@
 
 #define MAX_NODES (10)
 #define MAX_LINKS (30)
-#define MAX_DISTANCE 255
+#define MAX_DISTANCE (1e99)
+#define MAX_LINK_POWER (0.002)
 
 // Use type definition since actual datatype might change
 // (don't want to use floating point on the microcontroller...)
@@ -59,7 +60,7 @@ energy_t initialize_node_energy( uint8_t source_id );
 energy_t compute_mean_energy( uint8_t source_id );
 uint8_t dijkstra( uint8_t );
 void compute_shortest_path( uint8_t node_id );
-void compute_route_table( uint8_t* );
+void compute_rp_tables( uint8_t*, energy_t* );
 
 #ifdef DEBUG_ON
 void print_shortest_path( uint8_t );

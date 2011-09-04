@@ -7,6 +7,7 @@
 #ifndef _ROUTING_H
 #define _ROUTING_H
 #include <pthread.h>
+#include "dijkstra.h"
 
 pthread_mutex_t mutex_route_start;
 pthread_mutex_t mutex_route_done;
@@ -17,7 +18,7 @@ pthread_mutex_t mutex_route_done;
 #endif
 
 // Lookup table for converting cc2500 rssi value to received power in dBm
-static const double rssi_values[256] = {
+static const energy_t rssi_values[256] = {
 -72.0,-71.5,-71.0,-70.5,-70.0,-69.5,-69.0,-68.5,-68.0,-67.5,-67.0,
 -66.5,-66.0,-65.5,-65.0,-64.5,-64.0,-63.5,-63.0,-62.5,-62.0,
 -61.5,-61.0,-60.5,-60.0,-59.5,-59.0,-58.5,-58.0,-57.5,-57.0,
@@ -63,7 +64,7 @@ static const uint8_t power_settings[] = {
 0xE9, 0xF9, 0xEA, 0xFA, 0xFD, 0xEE, 0xFE, 0xEB, 0xEF, 0xFF };
 
 // Transmit power (in dBm) for register settings in power_settings array
-static const double power_values[] = { 
+static const energy_t power_values[] = { 
 -65.4, -33.9, -31.1, -29.5, -29.4, -29.3, -28.4, -26.4, -26.3, -26.2, 
 -25.9, -25.8, -25.6, -25.4, -24.9, -24.8, -23.7, -23.6, -23.4, -23.2, 
 -22.7, -22.5, -22.2, -21.9, -21.8, -21.7, -21.6, -21.5, -21.1, -21.0, 

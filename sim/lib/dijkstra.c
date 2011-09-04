@@ -78,7 +78,7 @@ uint8_t add_link( uint8_t source, uint8_t destination, energy_t link_power )
     new_link->destination = destination;
 
     // Disable link if the power required is maximum
-    if( link_power == MAX_DISTANCE )
+    if( link_power > MAX_LINK_POWER )
     {
       new_link->active = 0;
     }
@@ -442,7 +442,7 @@ void compute_shortest_path( uint8_t node_id )
   }
 }
 
-void compute_route_table( uint8_t* route_table )
+void compute_rp_tables( uint8_t* route_table, energy_t* link_powers )
 {
   uint8_t node_id;
   node_t* p_node;
@@ -450,7 +450,20 @@ void compute_route_table( uint8_t* route_table )
   for( node_id = 1; node_id < s_nodes.current_nodes; node_id++ )
   {
     p_node = find_node( node_id );
-    route_table[node_id-1] = p_node->p_previous->id;
+
+    // If node is not connected, set route to broadcast
+    if ( p_node->id == p_node->p_previous->id )
+    {
+      route_table[node_id-1] = 0; // Broadcast
+      link_powers[node_id-1] = MAX_LINK_POWER;
+
+    }
+    else
+    {
+      route_table[node_id-1] = p_node->p_previous->id;
+      link_powers[node_id-1] = 
+              find_link( p_node->p_previous->id, p_node->id )->links_power;
+    }
   }
   
   return;
