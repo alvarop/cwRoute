@@ -21,6 +21,8 @@ volatile uint8_t next_power = 0xff;
 double tx_power;
 double target_rssi;
 
+double get_power_from_setting( uint8_t );
+
 int main( int argc, char *argv[] )
 {   
   uint8_t serial_buffer[BUFFER_SIZE]; 
@@ -140,7 +142,7 @@ int main( int argc, char *argv[] )
 
 void process_packet( uint8_t* buffer )
 {
-  tx_power = dbm_to_watt(power_values[buffer[0]]);
+  tx_power = dbm_to_watt(get_power_from_setting( buffer[0] ));
   
   // Compute alpha by dividing received rssi over transmit power  
   double alpha = dbm_to_watt(rssi_values[buffer[2]])/tx_power;
@@ -156,6 +158,23 @@ void process_packet( uint8_t* buffer )
   //SendByte( serial_port_number, 0x00 );
 
   return;
+}
+
+double get_power_from_setting( uint8_t setting )
+{ 
+  uint8_t index;
+  for( index = 0; index < sizeof(power_settings); index++ )
+  {
+    if( setting == power_settings[index] )
+    {
+      return power_values[index];
+    }
+  }
+  
+  printf("Power not found!\n");
+  
+  // In case the power isn't found, default to maximum
+  return ( sizeof(power_values) - 1 );
 }
 
 /*!
