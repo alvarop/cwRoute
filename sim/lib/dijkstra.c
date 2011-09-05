@@ -442,6 +442,10 @@ void compute_shortest_path( uint8_t node_id )
   }
 }
 
+//
+// Store routes in an array and link powers in another
+// If the link does not exist, fill in dummy values
+//
 void compute_rp_tables( uint8_t* route_table, energy_t* link_powers )
 {
   uint8_t node_id;

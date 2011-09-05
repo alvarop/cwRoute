@@ -80,7 +80,8 @@ static const energy_t power_values[] = {
 -4.30, -3.80, -3.70, -3.50, -3.10, -2.70, -2.30, -1.90, -1.80, -1.30, 
 -0.80, -0.60, -0.40, -0.20, -0.10, +0.00, +0.30, +0.70, +1.10, +1.50 };
 
-void routing_initialize();
+uint8_t routing_initialize();
+void routing_finalize();
 void *compute_routes_thread( void* );
 uint8_t parse_table ( uint8_t p_rssi_table[][MAX_DEVICES+1] );
 

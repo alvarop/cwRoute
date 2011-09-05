@@ -9,7 +9,6 @@
 
 #include <stdint.h>
 
-
 #define BUFFER_SIZE ( 512 )
 
 // Function Prototypes

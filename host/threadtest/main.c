@@ -61,7 +61,11 @@ int main( int argc, char *argv[] )
   memset( (uint8_t*)power_table, 0xff, MAX_DEVICES );
   memset( (uint8_t*)routing_table, ( MAX_DEVICES + 1 ), MAX_DEVICES );
   
-  routing_initialize();
+  if ( routing_initialize() )
+  {
+    printf("Error initializing routes.\n");
+    exit(-1);
+  }
   
   rc = pthread_create( &serial_thread, NULL, serial_read_thread, NULL );
   
@@ -86,7 +90,7 @@ int main( int argc, char *argv[] )
     
     // Wait until routing is done
     pthread_mutex_lock ( &mutex_route_done );
-  
+    
     // Send new routes to AP
     send_serial_message( (uint8_t *)rp_tables, sizeof(rp_tables) );
     
@@ -143,6 +147,8 @@ void sigint_handler( int32_t sig )
     
     pthread_cancel( serial_thread );
     pthread_cancel( routing_thread );
+    
+    routing_finalize();
     
     // Close the serial port
     serial_close();
