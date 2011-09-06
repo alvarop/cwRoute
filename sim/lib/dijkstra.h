@@ -10,7 +10,7 @@
 #define MAX_NODES (10)
 #define MAX_LINKS (30)
 #define MAX_DISTANCE (1e99)
-#define MAX_LINK_POWER (0.002)
+#define MAX_LINK_POWER (0.001413)
 
 // Use type definition since actual datatype might change
 // (don't want to use floating point on the microcontroller...)
@@ -36,7 +36,7 @@ struct node_s
 struct link_s
 {
   energy_t links_power;   // Constant (how much power does the link require)
-  uint8_t source;         // 
+  uint8_t source;         //
   uint8_t destination;    //
   uint8_t active;         //
 };
@@ -75,4 +75,3 @@ void generate_graph( uint8_t, uint32_t );
 #endif
 
 #endif /* _NODES_H */\
-
