@@ -254,3 +254,4 @@ void dummy_callback( uint8_t* buffer, uint32_t size )
 {
   // Do nothing
 }
+

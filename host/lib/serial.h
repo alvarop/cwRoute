@@ -17,3 +17,4 @@ void *serial_read_thread();
 void serial_close();
 
 #endif /* _SERIAL_H */
+
