@@ -4,4 +4,8 @@
 *.aux
 *.log
 *.toc
+*.bbl
+*.blg
 build/
+images/
+logs/
