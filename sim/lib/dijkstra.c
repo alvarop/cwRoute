@@ -378,7 +378,7 @@ uint8_t dijkstra( uint8_t source_id )
           // Calculate the current cost of the link
           current_cost = p_source_node->energy + p_current_link->links_power;
           current_cost /= current_round;
-          current_cost += s_mean_energy /( current_round - 1 );
+          current_cost -= s_mean_energy /( current_round - 1 );
 
 #ifdef REGULAR_DIJKSTRA
           current_cost = p_current_link->links_power;
@@ -757,3 +757,4 @@ void generate_graph( uint8_t source_id, uint32_t file_number )
 }
 
 #endif
+

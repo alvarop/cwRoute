@@ -8,7 +8,7 @@
 #define _NODES_H
 
 #define MAX_NODES (10)
-#define MAX_LINKS (30)
+#define MAX_LINKS (100)
 #define MAX_DISTANCE (1e99)
 #define MAX_LINK_POWER (0.001413)
 
@@ -74,4 +74,5 @@ void print_all_nodes( uint8_t );
 void generate_graph( uint8_t, uint32_t );
 #endif
 
-#endif /* _NODES_H */\
+#endif /* _NODES_H */
+
