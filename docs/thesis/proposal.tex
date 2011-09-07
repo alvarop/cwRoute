@@ -1,0 +1,128 @@
+\documentclass{article}
+
+%\usepackage[draft]{pdfdraftcopy} %http://sarovar.org/projects/pdfdraftcopy/
+%\usepackage{todonotes} %http://tug.ctan.org/pkg/todonotes/
+%\usepackage{fullpage}
+\usepackage{graphicx}
+\begin{document}
+\title{Full-body Synchronized Sampling with Power Efficient Relays}
+\author{Alvaro Prieto}
+\maketitle
+
+\begin{abstract}
+This is the thesis proposal for a full-body, synchronized sampling system with power efficient relays. The main goal of the system is to provide a real-time electrocardiogram(ECG) over a low power wireless Body Sensor Network (BSN). 
+The primary contribution from this research is a method for synchronized sampling over relayed networks with a focus on energy efficiency. The proposed relaying method consists of a dynamic relaying model with a focus on energy efficiency in order to maximize network lifetime.
+\end{abstract}
+
+\pagebreak
+
+\tableofcontents
+
+\pagebreak
+
+\section{The Case for Synchronized Sampling}
+Why is synchronized sampling necessary? Until recently, most monitoring systems have been wired. The time difference between two concurrent measurements from interconnected devices is well below the required system tolerance. In most cases, all samples are scheduled, and connected directly, to one single clock source. Unfortunately, this is no longer the case with wireless monitoring systems. The time delay introduced by wireless transmission and reception is, in most cases, not negligible. Another major source of error comes from the introduction of more than one clock sources. In general, each device has its own clock source. Even though the clock sources might be physically similar, they do not oscillate at exactly the same rate. Minute differences in frequency add up over time and, eventually, the clock sources drift apart. Samples that previously occurred simultaneously now are separated by an unknown amount of time. The purpose of synchronized sampling in Wireless Sensor Networks (WSNs) consists of taking the time difference between samples into account and achieving performance similar to that of a wired system.
+
+% Include literature survey from other file
+\input{sources/literature_survey}
+
+\section{Project Plan}\label{section:plan}
+\subsection{Development Phases}
+During the first phase (\ref{section:firstphase}), a working reference system is developed. The second phase (\ref{section:secondphase}) consists of improving the reference system by adding relays(\ref{subsection:relays}) and finer time synchronization(\ref{subsection:synchronization}). The third and final stage (\ref{section:thirdphase}) combines the improvements of the second stage(\ref{subsection:proposed}) and compares the results with current published solutions (\ref{subsection:performance}).
+
+\subsection{Project Timeline}
+These are the proposed milestones for the project:
+
+\begin{itemize}
+	\item \textbf{April 8} - Have working platform of the reference system.
+	\begin{itemize}
+		\item Reference system consists of full wireless ECG implementation on non-relaying network.
+	\end{itemize}
+	\item \textbf{May 6} - Implement reference relaying system.
+	\item \textbf{May 27} - Formulate new protocol with energy efficient relaying for network lifetime maximization.
+	\item \textbf{June 10} - Implement formulated relaying protocol.
+	\item \textbf{June 24} - Compare performance between reference and formulated protocol.
+	\item \textbf{August 12} - Submit research thesis.
+\end{itemize}
+
+\section{First Phase}\label{section:firstphase}
+
+\subsection{Reference System}
+The first step is the development of a working reference system. This system is based on the Imperial College London BSN Motes running TinyOS. Multiple nodes, arranged in a single-hop star topology, act as wireless electrodes for an ECG system. The access point node interfaces with the host computer and display measured data. The goal of the reference system is to have a working base system that can be built on and improved. The reference system should demonstrate a fully working wireless ECG.
+
+\emph{Note: In the first reference system, the access point node interfaces directly with the host computer through a wired connection, reducing initial system complexity and points of failure.}
+
+\subsection{Power Control}
+Once the reference system is working, power control is introduced to reduce power consumption and increase network lifetime. Power control allows each wireless device to control Tx power and measure Rx power. This allows each connection to use the minimum required power, decreasing the energy consumed by each transmission.
+
+\section{Second Phase}\label{section:secondphase}
+In order to minimize complexity and focus on specific tasks, both sections in the second stage are to occur in parallel. Once working, both will be merged to implement the third, and final stage (\ref{section:thirdphase}).
+
+\subsection{New Synchronization System}\label{subsection:synchronization}
+In addition to the single-hop reference system, a novel synchronization method is introduced. The goal is to reduce power consumption, therefore increasing network lifetime, while maintaining an acceptable level of time synchronization between nodes. A detailed description of the proposed synchronization method can be seen in Section~\ref{section:synchronization}.
+
+\subsection{Relaying on Reference System}\label{subsection:relays}
+Without worrying about novel time synchronization, the reference system is expanded to support relaying, and increasing network coverage. The goal is to have a working wireless ECG platform over larger networks.  The use or relays in BSNs has been shown to greatly reduce power consumption in various situations~\cite{relay:creepingwave}. Tight integration of power control, relaying, and routing algorithms will increase the overall network lifetime by minimizing power usage. 
+
+The relaying system will maximize system lifetime by using centralized power control and routing. The main node, or access point, has some control of the power consumption of each node by deciding which route the data will take. Depending on the route, different Tx power will be used by each node, changing its power consumption. If a node is running low on power, the access point will try to avoid using it as a relay to increase the overall life of the entire system. That node can further decrease power consumption by relaying its data through the closest neighbor, requiring less Tx power. A method to measure the power consumption is explained in Section~\ref{subsection:performance}.
+
+\section{Third Phase}\label{section:thirdphase}
+
+\subsection{Proposed System}\label{subsection:proposed}
+Once the novel synchronization method and relaying work independently, they are combined to form the final system. The proposed system includes time synchronization over relayed networks with tight integration of power control.
+
+\subsection{Proposed System Benefitsdynamic relaying model with a focus on energy efficiency in order to maximize network lifetime}
+Unlike many WSN applications, the wireless ECG application implemented with a BSN has certain properties that simplify the design. The area over which BSN nodes are distributed is smaller than most WSNs. This means that only few relaying nodes are needed to cover the required area. This physical constraint allows for simple routing algorithms to be used and reduces overall power consumption due to close-by nodes. For the same reason, the network topology rarely changes, minimizing the number of network restructuring events. Another benefit comes in the fact that the wireless ECG application is fully deterministic. There is a constant stream of bio-potential measurements flowing from each node at a known rate, and there are no unscheduled events. This allows more time to be allocated to measurement data, instead of having down time to account for unscheduled interrupts.
+
+\subsection{Performance Comparison}\label{subsection:performance}
+Once a working proposed system is obtained, performance comparisons with the reference system are required. This includes comparisons of the reference system using other synchronization methods, like~\cite{synchronization:FTSP}, if possible.
+
+The proposed system does not need to achieve time synchronization as precise as~\cite{synchronization:FTSP}. The goal is to have acceptable synchronization while minimizing power use and therefore maximizing network life. If the system underperforms in time precision yet utilizes less resources, it can be considered a successful improvement for the specific application of wireless ECG.
+
+Power use during transmit/receive and idle times can be measured by using the voltage across a current-sense(precision) resistor placed in series with the power supply~\cite{mac:lowdutycycle}. Fixed size-messages can be transmitted to calculate the energy-per-bit used during transmission. The measurement can then be used to calculate the power consumption as long as the number of transmitted bits is known, without requiring the actual power measurements. By measuring the energy-per-bit at different transmit power levels, a mathematical model for the (radio) energy consumption can be created. This model can then be used to compare various synchronization and relaying methods.
+
+\section{Proposed Synchronization Method}\label{section:synchronization}
+
+\subsection{Function}
+The proposed method both compensates for time offsets between samples and minimizes the effect of clock drift by periodically synchronizing independent clock sources together. Figure~\ref{fig:network_layout} shows an example system consisting of three end devices (\emph{ED}s), one access point (\emph{AP}) and one host computer. 
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=0.4\textwidth]{figures/network-map-test2.pdf}
+\end{center}
+\caption{Test Network Layout}
+\label{fig:network_layout}
+\end{figure}
+
+\subsection{Synchronization}
+All devices have a timer used for time-stamping and synchronization. All events, including samples and data transfers, occur according to the value of the timer. Due to certain hardware limitations, the value of the timer cannot be altered, it can only be reset to zero. This does not, in any way, affect the synchronization of devices.
+
+The timer inside the \emph{AP} can be considered the primary, or global, timer. The goal is to synchronize all \emph{ED}, or local, timers with the global timer. Whenever the global timer reaches its maximum value, and rolls over back to zero, the \emph{AP} sends a broadcast synchronization beacon instructing each end device it is time zero. When an \emph{ED} receives this message, it compares its current timer value to zero, to calculate the clock drift, and resets it to zero. This ensures that all \emph{ED} timers are aligned, which then allows measurements to occur at close to the same time.
+
+\subsection{Scheduler}
+A round robin-like scheme is used to poll devices in the network. The previous polling system was created as a demonstration for a specific hardware platform and was not as efficient or clean as possible. This new iteration focuses on simplicity and portability.
+
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=1\textwidth]{figures/sync_schedule.pdf}
+\end{center}
+\caption{System Schedule}
+\label{fig:system_schedule}
+\end{figure}
+
+Previously, each \emph{ED} was polled for sampled data, which required all \emph{ED}s to be on at all times. Once all device clocks are synchronized, polling is no longer necessary. Instead of sending poll messages to each device, the \emph{AP} just listens for \emph{ED} transmissions. The \emph{ED}s will wake up when they are scheduled to transmit and send the required data automatically. This method greatly reduces the power consumption of both \emph{AP} and \emph{ED}s. After initialization, the \emph{AP} only needs to send a periodic time synchronization beacon and the collected data back to the host computer. Once synchronized, end devices will only need to turn their receiver on around the time synchronization beacon is expected.
+
+Figure~\ref{fig:system_schedule} shows a sample system schedule. The figure shows the time each device is on, and the state of each radio. The ``sleep'' time for each \emph{ED} does not show when a device wakes up to sample data. In this specific case, the \emph{AP} has one extra time-slot allotted for a fourth \emph{ED} to connect and use.
+
+Certain devices can further reduce power consumption by sampling without using the main processor. This works by using direct-memory access(\emph{DMA}) which allows the analog-to-digital converter(\emph{ADC}) to store measurements in memory without first going through the processor. Using this method, Figure~\ref{fig:system_schedule} accurately presents the time each \emph{ED} is powered on.
+
+\section{Proposed Relaying Method}\label{section:relaying}
+The proposed relaying method, while not fully defined yet, will utilize some concepts presented by previous work while introducing novel methods. A basic description of the system consists of a dynamic relaying model with a focus on energy efficiency in order to maximize network lifetime. One of the main contributions is the use of the creeping wave model~\cite{relay:creepingwave}, along with power consumption, as a main factor in the routing algorithm. The relaying method will be integrated with the previously described synchronization method to create the final system.
+
+%\bibliographystyle{IEEEtran}
+\bibliographystyle{plain}
+\bibliography{sources/thesis}{}
+
+%\pagebreak
+%\listoftodos
+
+\end{document}
