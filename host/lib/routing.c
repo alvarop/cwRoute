@@ -119,17 +119,11 @@ void routing_finalize()
 void *compute_routes_thread( void *rp_tables )
 {
   static uint32_t index;
+  uint8_t node_index;
   uint8_t *route_table = &((uint8_t*)rp_tables)[0];
   uint8_t *power_table = &((uint8_t*)rp_tables)[MAX_DEVICES];
-
-  uint8_t node_index;
-  for( node_index = 0; node_index < MAX_DEVICES; node_index++ )
-    {
-
-      printf("%5.1f ", previous_powers[node_index] );
-    }
-    printf("<--\n");
-
+  
+  
   // loop forever
   for (;;)
   {
@@ -161,23 +155,11 @@ void *compute_routes_thread( void *rp_tables )
     // Compute power table
     compute_required_powers( link_powers, power_table );
 
-    for( node_index = 0; node_index < MAX_DEVICES; node_index++ )
-    {
-      //printf("%02X ", power_table[node_index] );
-      printf("%g(0x%02X) ", previous_powers[node_index], power_table[node_index] );
-    }
-    printf("\n");
-
-    //print_all_links();
-
     // Compute engergy mean and subtract from each individual mean
     compute_mean_energy( AP_NODE_ID );
 
-    //print_node_energy( 0, fp_out );
-
-    //generate_graph( 0, index );
-
     print_rssi_table();
+
     print_node_energy( AP_NODE_ID, fp_energies );
 
     index++;
@@ -319,16 +301,12 @@ void compute_required_powers( energy_t* p_link_powers, uint8_t* power_table )
     power_table[node_index] =
                 find_closest_power( watt_to_dbm( p_link_powers[node_index] ) );
 
-    printf("%g ", watt_to_dbm( p_link_powers[node_index] ));
-
     // Save current required power to be used as tx_power next round
     previous_powers[node_index] =
                             //get_power_from_setting( 0xff );  // no power control
                             get_power_from_setting( power_table[node_index] );
 
-
   }
-  printf("\n");
 }
 
 void print_rssi_table()
@@ -340,51 +318,51 @@ void print_rssi_table()
 
   for( col_index = 0; col_index <= MAX_DEVICES; col_index++ )
   {
-    printf(" %3d   ", col_index );
+    //printf(" %3d   ", col_index );
   }
 
-  printf("\r\n");
+  //printf("\r\n");
 
   // Print packet in hex
   for( row_index = 0; row_index <= MAX_DEVICES; row_index++ )
   {
-    printf("%2d ", row_index );
+    //printf("%2d ", row_index );
 
     // RSSI table
     for( col_index = 0; col_index < MAX_DEVICES; col_index++ )
     {
-      printf("%06.1f ", rssi_table[row_index][col_index] );
+      //printf("%06.1f ", rssi_table[row_index][col_index] );
       fprintf( fp_debug, "%g,", rssi_table[row_index][col_index] );
       fprintf( fp_rssi, "%g,", rssi_table[row_index][col_index] );
     }
-    printf("%06.1f ", rssi_table[row_index][col_index] );
+    //printf("%06.1f ", rssi_table[row_index][col_index] );
     fprintf( fp_debug, "%g,", rssi_table[row_index][col_index] );
     fprintf( fp_rssi, "%g,", rssi_table[row_index][col_index] );
 
     if( row_index > 0 )
     {
-      printf("%g ", previous_powers_debug[row_index-1] );
+      //printf("%g ", previous_powers_debug[row_index-1] );
       fprintf( fp_debug, "%g,", ( previous_powers_debug[row_index-1] ) );
 
-      printf("%g ", link_powers[row_index-1] );
+      //printf("%g ", link_powers[row_index-1] );
       fprintf( fp_debug, "%g,", watt_to_dbm( link_powers[row_index-1] ) );
       fprintf( fp_powers, "%g,", watt_to_dbm( link_powers[row_index-1] ) );
 
-      printf("%d ", route_table_debug[row_index-1] );
+      //printf("%d ", route_table_debug[row_index-1] );
       fprintf( fp_debug, "%d,", route_table_debug[row_index-1] );
       fprintf( fp_routes, "%d,", route_table_debug[row_index-1] );
 
     }
     else
     {
-      printf("%g ", 1.5 ); // AP always transmits max power
+      //printf("%g ", 1.5 ); // AP always transmits max power
       fprintf( fp_debug, "%g,", ( 1.5 ) );
 
-      printf("%g ", 1.5 ); // AP always transmits max power
+      //printf("%g ", 1.5 ); // AP always transmits max power
       fprintf( fp_debug, "%g,", ( 1.5 ) );
       fprintf( fp_powers, "%g,", 1.5 );
 
-      printf("0 ");
+      //printf("0 ");
       fprintf( fp_debug, "0," );
       fprintf( fp_routes, "0," );
 
@@ -393,18 +371,18 @@ void print_rssi_table()
 
     for( col_index = 0; col_index < MAX_DEVICES; col_index++ )
     {
-      printf("%g ", link_power_table[row_index][col_index] );
+      //printf("%g ", link_power_table[row_index][col_index] );
       fprintf( fp_debug, "%g,", watt_to_dbm( link_power_table[row_index][col_index] ) );
     }
 
-    printf("%g ", link_power_table[row_index][col_index] );
+    //printf("%g ", link_power_table[row_index][col_index] );
     fprintf( fp_debug, "%g,", watt_to_dbm( link_power_table[row_index][col_index] ) );
 
-    printf("\r\n");
+    //printf("\r\n");
     fprintf( fp_debug, "\n" );
   }
 
-  printf("\r\n");
+  //printf("\r\n");
   fprintf( fp_debug, "\n" );
   fprintf( fp_rssi, "\n" );
   fprintf( fp_routes, "\n" );
@@ -483,3 +461,4 @@ double watt_to_dbm( double power )
 {
   return 10l * log10( 1000l * power );
 }
+
