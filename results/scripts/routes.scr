@@ -1,0 +1,12 @@
+# gnuplot script for 'routes.dat'
+plot "routes.dat" using 1:2 title 'AP'
+replot "routes.dat" using 1:3 title 'ED1'
+replot "routes.dat" using 1:4 title 'ED2'
+replot "routes.dat" using 1:5 title 'ED3'
+replot "routes.dat" using 1:6 title 'ED4'
+replot "routes.dat" using 1:7 title 'ED5'
+replot "routes.dat" using 1:8 title 'ED6'
+replot "routes.dat" using 1:9 title 'ED7'
+replot "routes.dat" using 1:10 title 'ED8'
+
+pause -1

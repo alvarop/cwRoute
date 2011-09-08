@@ -1,0 +1,12 @@
+# gnuplot script for 'energies.dat'
+plot "energies.dat" using 1:2 with lines title 'Average'
+replot "energies.dat" using 1:3 with lines title 'ED1'
+replot "energies.dat" using 1:4 with lines title 'ED2'
+replot "energies.dat" using 1:5 with lines title 'ED3'
+replot "energies.dat" using 1:6 with lines title 'ED4'
+replot "energies.dat" using 1:7 with lines title 'ED5'
+replot "energies.dat" using 1:8 with lines title 'ED6'
+replot "energies.dat" using 1:9 with lines title 'ED7'
+replot "energies.dat" using 1:10 with lines title 'ED8'
+
+pause -1
