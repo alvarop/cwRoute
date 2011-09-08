@@ -87,18 +87,18 @@ int main( int argc, char *argv[] )
     exit(-1);
   }
 
+  pthread_mutex_init( &mutex_graph, NULL );
+
+  // Start mutex locked
+  pthread_mutex_lock ( &mutex_graph );
+
   rc = pthread_create( &graphing_thread, NULL, graph_thread, NULL );
 
   if (rc)
   {
     printf("Error creating serial thread\n");
     exit(-1);
-  }
-
-  pthread_mutex_init( &mutex_graph, NULL );
-
-  // Start mutex locked
-  pthread_mutex_lock ( &mutex_graph );
+  }  
 
   for(;;)
   {

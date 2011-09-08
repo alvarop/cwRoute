@@ -176,7 +176,7 @@ void *compute_routes_thread( void *rp_tables )
 /*******************************************************************************
  * @fn    uint8_t parse_table ( int8_t p_rssi_table[][MAX_DEVICES+1] )
  *
- * @brief Get RSSI table, convert, store and print it
+ * @brief Get RSSI table, convert, store and print it(gets uint8_t rssi array)
  * ****************************************************************************/
 uint8_t parse_table ( uint8_t p_rssi_table[][MAX_DEVICES+1] )
 {
@@ -202,6 +202,53 @@ uint8_t parse_table ( uint8_t p_rssi_table[][MAX_DEVICES+1] )
                                rssi_values[p_rssi_table[row_index][col_index]];
       }
 
+      if( 0 == col_index )
+      {
+        // AP always transmits with max power
+        tx_power = dbm_to_watt( get_power_from_setting( 0xff ) );
+      }
+      else
+      {
+        // Use previous transmit settings
+        tx_power = dbm_to_watt( previous_powers[col_index + 1] );
+      }
+
+      //tx_power = dbm_to_watt( 1.5l ); // uncomment for no power control
+
+      // Compute the minimum power required to meet this link with 'target_rssi'
+      // alpha is the channel attenuation, that is received/transmitted power
+      alpha = dbm_to_watt( rssi_table[row_index][col_index] ) / tx_power;
+
+      // Transmit power required is the target rssi / channel attenuation
+      link_power_table[row_index][col_index] = target_rssi / alpha;
+
+    }
+  }
+
+  // Did not read table successfully
+  return 0;
+}
+
+/*******************************************************************************
+ * @fn    uint8_t parse_table_d ( energy_t p_rssi_table[][MAX_DEVICES+1] )
+ *
+ * @brief Get RSSI table, convert, store and print it (gets energy_t rssi array)
+ * ****************************************************************************/
+uint8_t parse_table_d ( energy_t p_rssi_table[][MAX_DEVICES+1] )
+{
+  uint8_t row_index;
+  uint8_t col_index;
+  energy_t tx_power;
+  energy_t alpha;
+
+  // Convert table to rssi values from raw data and copy to local array
+  for( row_index = 0; row_index <= MAX_DEVICES; row_index++ )
+  {
+    for( col_index = 0; col_index <= MAX_DEVICES; col_index++ )
+    {
+      // Copy rssi table
+      rssi_table[row_index][col_index] = p_rssi_table[row_index][col_index];
+      
       if( 0 == col_index )
       {
         // AP always transmits with max power
@@ -337,7 +384,7 @@ void print_rssi_table()
     }
     //printf("%06.1f ", rssi_table[row_index][col_index] );
     fprintf( fp_debug, "%g,", rssi_table[row_index][col_index] );
-    fprintf( fp_rssi, "%g,", rssi_table[row_index][col_index] );
+    fprintf( fp_rssi, "%g\n", rssi_table[row_index][col_index] );
 
     if( row_index > 0 )
     {

@@ -84,6 +84,7 @@ uint8_t routing_initialize();
 void routing_finalize();
 void *compute_routes_thread( void* );
 uint8_t parse_table ( uint8_t p_rssi_table[][MAX_DEVICES+1] );
+uint8_t parse_table_d ( energy_t p_rssi_table[][MAX_DEVICES+1] );
 energy_t get_power_from_setting( uint8_t setting );
 
 #endif /*_ROUTING_H */
