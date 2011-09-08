@@ -1,6 +1,6 @@
 /** @file main.c
 *
-* @brief Read CSV file with RSSI table and generate links with it
+* @brief Read CSV file with RSSI table and simulate routing algorithm
 *
 * @author Alvaro Prieto
 */
@@ -8,39 +8,52 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-
+#include <signal.h>
+#include <unistd.h>
+#include <pthread.h>
+#include "routing.h"
 #include "dijkstra.h"
-
 #include "main.h"
 
-#define INBUFSIZE (512)
-#define MAX_DEVICES (6)
+#define INBUFSIZE (4096)
 
-void parse_line( char*, energy_t* );
-uint8_t parse_table( FILE* , energy_t p_rssi_table[][MAX_DEVICES+1] );
-void clean_table( energy_t p_rssi_table[][MAX_DEVICES+1] );
-void add_links_from_table( energy_t p_rssi_table[][MAX_DEVICES+1] );
+#ifndef MAX_DEVICES
+#define MAX_DEVICES (3)
+#warning MAX_DEVICES not defined, defaulting to 3
+#endif
 
-double dbm_to_watt( double power );
-double watt_to_dbm( double power );
+void read_line( char*, energy_t* );
+uint8_t read_table( FILE* , energy_t p_rssi_table[][MAX_DEVICES+1] );
+void *graph_thread();
+void sigint_handler( int32_t sig );
 
-energy_t target_rssi;
+pthread_t routing_thread;
+pthread_t graphing_thread;
+
+pthread_mutex_t mutex_graph;
+
+// Routing and power tables (all in one array)
+static volatile uint8_t rp_tables[MAX_DEVICES * 2];
+
+// Table storing all device routes
+static volatile uint8_t *routing_table = &rp_tables[0];
+
+// Table storing all device transmit powers
+static volatile uint8_t *power_table = &rp_tables[MAX_DEVICES];
 
 int32_t main ( int32_t argc, char *argv[] )
 {
-  FILE *fp_in, *fp_out;
+  FILE *fp_in;
+  int32_t rc;
   energy_t rssi_table[MAX_DEVICES+1][MAX_DEVICES+1];
-  uint32_t index = 0;
-  char node_id_string[3];
-  uint8_t node_index;
 
-  target_rssi = dbm_to_watt(-75l);
+  // Handle interrupt events to make sure files are closed before exiting
+  (void) signal( SIGINT, sigint_handler );
 
   // Make sure the filename is included
   if ( argc < 3 )
   {
-    printf( "Usage: %s infile outfile\r\n", argv[0] );
+    printf( "Usage: %s infile [graph (0,1)]\r\n", argv[0] );
     return 1;
   }
 
@@ -52,72 +65,75 @@ int32_t main ( int32_t argc, char *argv[] )
     printf( "Error opening input file.\r\n" );
     return 1;
   }
-
-  // Open output csv file
-  fp_out = fopen( argv[2], "w" );
-
-  if( NULL == fp_out )
+  
+  // Initialize routing an power tables
+  memset( (uint8_t*)power_table, 0xff, MAX_DEVICES );
+  memset( (uint8_t*)routing_table, ( MAX_DEVICES + 1 ), MAX_DEVICES );
+  
+  if ( routing_initialize() )
   {
-    printf( "Error opening input file.\r\n" );
-    return 1;
+    printf("Error initializing routes.\n");
+    exit(-1);
   }
 
-  // Add nodes
-  for( node_index = 0; node_index < (MAX_DEVICES + 1); node_index++ )
+  rc = pthread_create( &routing_thread, NULL, compute_routes_thread,
+                                                        (void*) routing_table );
+
+  if (rc)
   {
-    sprintf( node_id_string, "%d", node_index );
-    add_labeled_node( node_index, 0, node_id_string );
+    printf("Error creating routing thread\n");
+    exit(-1);
   }
+  
+  // Create mutex
+  pthread_mutex_init( &mutex_graph, NULL );
 
-  initialize_node_energy( 0 );
+  // Start mutex locked
+  pthread_mutex_lock ( &mutex_graph );
 
-  print_node_energy( 0, fp_out );
+  rc = pthread_create( &graphing_thread, NULL, graph_thread, NULL );
 
-  //parse_table( fp_in, rssi_table );
-  while( parse_table( fp_in, rssi_table ) )
+  if (rc)
+  {
+    printf("Error creating serial thread\n");
+    exit(-1);
+  }  
+
+  // Lock this before starting
+  pthread_mutex_lock ( &mutex_route_done );
+
+  while( read_table( fp_in, rssi_table ) )
   {
 
-    clean_table( rssi_table );
+    parse_table_d( rssi_table );
+  
+    // Let the routing algorithm run
+    pthread_mutex_unlock ( &mutex_route_start );
+    
+    // Wait until routing is done
+    pthread_mutex_lock ( &mutex_route_done );
 
-    add_links_from_table( rssi_table );
-
-    // Run dijkstra's algorithm with 0 being the access point
-    dijkstra( 0 );
-
-    // Display shortest paths and update energies
-    for( node_index = 1; node_index < (MAX_DEVICES + 1); node_index++ )
+    // Only graph when asked to
+    if ( argv[2][0] == '1')
     {
-      compute_shortest_path( node_index );
-      print_shortest_path( node_index );
+      // Start generating the graph
+      pthread_mutex_unlock ( &mutex_graph );
     }
 
-    //print_all_links();
-
-    // Compute engergy mean and subtract from each individual mean
-    compute_mean_energy( 0 );
-
-    printf("Round %d\n", index);
-    print_node_energy( 0, fp_out );
-
-    //generate_graph( 0, index );
-
-
-
-    index++;
+ 
   }
 
-  fclose( fp_out );
   fclose( fp_in );
 
   return 0;
 }
 
 /*******************************************************************************
- * @fn    void parse_line ( char* csv_line, int8_t* rssi_line )
+ * @fn    void read_line ( char* csv_line, int8_t* rssi_line )
  *
  * @brief Parse line from csv file an populate array row with contents
  * ****************************************************************************/
-void parse_line ( char* csv_line, energy_t* rssi_line )
+void read_line ( char* csv_line, energy_t* rssi_line )
 {
   char *p_item;
   uint16_t item_index = 0;
@@ -126,7 +142,7 @@ void parse_line ( char* csv_line, energy_t* rssi_line )
   while( NULL != p_item )
   {
     // Convert string to RSSI value and store in rssi_line
-    rssi_line[item_index] = rssi_values[(uint8_t)strtol( p_item, NULL, 10 )];
+    rssi_line[item_index] = (energy_t)strtod( p_item, NULL );
 
     item_index++;
     p_item = strtok( NULL, "," );
@@ -134,21 +150,22 @@ void parse_line ( char* csv_line, energy_t* rssi_line )
 }
 
 /*******************************************************************************
- * @fn    uint8_t parse_table ( FILE* fp_csv_file,
+ * @fn    uint8_t read_table ( FILE* fp_csv_file,
  *                                      int8_t p_rssi_table[][MAX_DEVICES+1] )
  *
  * @brief Read lines from CSV file and parse them until an empty line is found
  * ****************************************************************************/
-uint8_t parse_table ( FILE* fp_csv_file, energy_t p_rssi_table[][MAX_DEVICES+1] )
+uint8_t read_table ( FILE* fp_csv_file, energy_t p_rssi_table[][MAX_DEVICES+1] )
 {
   char csv_line[INBUFSIZE];   // Buffer for reading a line in the file
   uint16_t line_index = 0;
-
+  printf("Reading table\n");
   while( NULL != fgets( csv_line, sizeof(csv_line), fp_csv_file ) )
   {
     // Detect empty line
     if( csv_line[0] == '\n' )
     {
+      printf("Read table\n");
       // Read table successfully
       return 1;
     }
@@ -158,7 +175,7 @@ uint8_t parse_table ( FILE* fp_csv_file, energy_t p_rssi_table[][MAX_DEVICES+1] 
       csv_line[(int32_t)strlen(csv_line)-1] = 0;
 
       // Parse csv line and populate array
-      parse_line( csv_line, p_rssi_table[line_index] );
+      read_line( csv_line, p_rssi_table[line_index] );
     }
 
     if( line_index > MAX_DEVICES )
@@ -175,77 +192,99 @@ uint8_t parse_table ( FILE* fp_csv_file, energy_t p_rssi_table[][MAX_DEVICES+1] 
 }
 
 /*******************************************************************************
- * @fn    void clean_table( int8_t rssi_table[][MAX_DEVICES+1] )
- *
- * @brief Compare the RSSI from two links and only keep the best value
+ * @fn     void *graph_thread()
+ * @brief  Run as thread. Generates graph from routing table
  * ****************************************************************************/
-void clean_table( energy_t rssi_table[][MAX_DEVICES+1] )
+void *graph_thread()
 {
-  uint16_t col_index, row_index;
+  uint8_t link_index;
+  FILE* f_graph;
+  char command[100];
+  char filename[100];
+  static uint32_t frame = 0;
 
-  for( row_index = 0; row_index < ( MAX_DEVICES+1 ); row_index++ )
+  for(;;)
   {
-    for( col_index = row_index; col_index < ( MAX_DEVICES+1 ); col_index++ )
+    // Block until next table is ready
+    pthread_mutex_lock ( &mutex_graph );
+
+    sprintf( filename, "images/graph%05d.gv", frame );
+
+    printf("%s\n", filename);
+
+    f_graph = fopen(filename, "w" );
+
+    if ( f_graph != NULL )
     {
-      if( rssi_table[row_index][col_index] < rssi_table[col_index][row_index] )
+      fprintf( f_graph,  "digraph network" );
+
+      fprintf( f_graph,  " {\n" );
+
+      // Configuration stuff
+
+      fprintf( f_graph, "edge [len=3]\n");
+      fprintf( f_graph, "nodesep=0.25\n");
+      fprintf( f_graph, "node[shape = doublecircle]; %d;\n",
+                                                        ( MAX_DEVICES + 1 ) );
+
+      fprintf( f_graph, "node[shape = circle];\n");
+
+      // All connections
+      for( link_index = 0; link_index < MAX_DEVICES; link_index++ )
       {
-        rssi_table[row_index][col_index] = rssi_table[col_index][row_index];
+        if ( routing_table[link_index] != 0 )
+        {
+          fprintf( f_graph, "%d -> %d", ( link_index + 1 ),
+                                                    routing_table[link_index] );
+          fprintf( f_graph, "[ label=\"");
+          fprintf( f_graph,  "%5.1f dBm",
+                      get_power_from_setting( power_table[link_index] ) );
+          fprintf( f_graph, "\" ]");
+          fprintf( f_graph,  ";\n" );
+        }
       }
-      rssi_table[col_index][row_index] = 128;
-    }
 
-  }
+      // print_node_name to file
+      for( link_index = 0; link_index < MAX_DEVICES; link_index++ )
+      {
+          fprintf( f_graph, "%d [label=\"%d\"];\n", ( link_index + 1 ),
+                                                          ( link_index + 1 ) );
+      }
 
-}
+      fprintf( f_graph, "%d [label=\"AP\"];\n", ( MAX_DEVICES + 1 ) );
 
-/*******************************************************************************
- * @fn    void add_links_from_table( int8_t rssi_table[][MAX_DEVICES+1] )
- *
- * @brief Generate dijkstra links from cleaned up table
- * ****************************************************************************/
-void add_links_from_table( energy_t rssi_table[][MAX_DEVICES+1] )
-{
-  uint16_t col_index, row_index;
-  energy_t link_power;
-  energy_t tx_power;
-  energy_t alpha;
+      fprintf( f_graph,  "}\n" );
 
-  // Constant tx power for now, will change later
-  tx_power = dbm_to_watt(1.5l);
+      fclose( f_graph );
 
-  for( row_index = 0; row_index < ( MAX_DEVICES ); row_index++ )
-  {
-    for( col_index = row_index + 1; col_index < ( MAX_DEVICES+1 ); col_index++ )
-    {
-      // Compute the minimum power required to meet this link with 'target_rssi'
-      // alpha is the channel attenuation, that is received/transmitted power
-      alpha = dbm_to_watt( rssi_table[row_index][col_index] ) / tx_power;
+      // Generate svg of graph using GraphViz 'neato'
+      //system("neato -Tsvg -ograph.svg graph.gv");
+      //system("dot -Tsvg -ograph.svg graph.gv");
+      //sprintf( command, "neato -Tjpg -oimages/graph%04d.jpg images/graph.gv", file_number);
+      sprintf( command, "dot -Tjpg -Gsize=4,4! -Gratio=fill -oimages/graph%05d.jpg %s", frame, filename );
+      system( command );
 
-      // Transmit power required is the target rssi / channel attenuation
-      link_power = target_rssi / alpha;
+      // Animate with ffmpeg -r 10 -b 500000 -i graph%05d.jpg ./animation.mp4
 
-      // Add link
-      add_link( row_index, col_index, link_power );
+      frame++;
     }
   }
+  return NULL;
 }
 
 /*******************************************************************************
- * @fn    double dbm_to_watt( double power )
- *
- * @brief Convert power from dBm to Watts
+ * @fn     void sigint_handler( int32_t sig )
+ * @brief  Handle interrupt event (SIGINT) so program exits cleanly
  * ****************************************************************************/
-double dbm_to_watt( double power )
+void sigint_handler( int32_t sig )
 {
-  return pow(10, power/10l)/1000l;
+
+    pthread_cancel( routing_thread );
+    pthread_cancel( graphing_thread );
+
+    routing_finalize();
+
+    printf("\nExiting...\n");
+    exit(sig);
 }
 
-/*******************************************************************************
- * @fn    double watt_to_dbm( double power )
- *
- * @brief Convert power from Watts to dBm
- * ****************************************************************************/
-double watt_to_dbm( double power )
-{
-  return 10l * log10( 1000l * power );
-}

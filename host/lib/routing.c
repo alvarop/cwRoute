@@ -361,7 +361,7 @@ void print_rssi_table()
   uint8_t row_index;
   uint8_t col_index;
 
-  printf("   ");
+  //printf("   ");
 
   for( col_index = 0; col_index <= MAX_DEVICES; col_index++ )
   {

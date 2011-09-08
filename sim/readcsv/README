@@ -1,3 +1,3 @@
-Compile: gcc -Wall -lm -DDEBUG_ON -I../lib ../lib/dijkstra.c  main.c  -oreadcsv
+Compile: gcc -Wall -pthread -lm -I../../host/lib/ -I../lib -DMAX_DEVICES=8 -DDEBUG_ON ../lib/dijkstra.c ../../host/lib/routing.c main.c  -oreadcsv
 Run: ./readcsv [infile].csv [outfile].csv
 
