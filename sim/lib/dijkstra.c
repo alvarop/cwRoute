@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <math.h>
 #include "dijkstra.h"
 
 static nodes_t s_nodes;
@@ -31,7 +32,7 @@ uint8_t add_node( uint8_t node_id, uint8_t is_relay )
   {
     new_node = &s_nodes.nodes[s_nodes.current_nodes];
     new_node->id = node_id;
-    new_node->energy = 0;
+    new_node->energy = MAX_LINK_POWER;
     new_node->visited = 0;
     new_node->is_relay = is_relay;
 
@@ -97,54 +98,38 @@ uint8_t add_link( uint8_t source, uint8_t destination, energy_t link_power )
 }
 
 //
-// Initialize mean energy from direct links to AP
+// Initialize node energy from direct links to AP
 //
 energy_t initialize_node_energy( uint8_t source_id )
 {
-  node_t* p_node;
-  uint8_t link_index;
+  uint8_t node_index;
 
   current_round = 1;
 
-  for( link_index = 0; link_index < s_links.current_links; link_index++ )
+  for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
   {
-    if( s_links.links[link_index].source == source_id )
+    if( s_nodes.nodes[node_index].id != source_id )
     {
-      p_node = find_node( s_links.links[link_index].destination );
-
-#ifdef DEBUG_ON
-  //print_node_name( p_node->id );
-#endif
-      if ( !p_node->is_relay )
-      {
-        p_node->energy = s_links.links[link_index].links_power;
-        s_mean_energy += p_node->energy;
-#ifdef DEBUG_ON
-  //printf("(%g)", p_node->energy);
-#endif
-      }
-#ifdef DEBUG_ON
-  //printf("\n");
-#endif
+      s_nodes.nodes[node_index].energy = MAX_LINK_POWER; 
     }
   }
-
-  // Compute actual mean (subtracting 1 to account for source)
-  s_mean_energy /= (s_nodes.current_nodes - 1 - s_nodes.current_relays);
-
-#ifdef DEBUG_ON
-  //printf("Mean Energy: %g\n", s_mean_energy);
-#endif
 
   return s_mean_energy;
 }
 
 //
-// Re-calculate mean energy
+// Find node using the last amount of energy
 //
-energy_t compute_mean_energy( uint8_t source_id )
+energy_t find_min_energy( uint8_t source_id )
 {
   uint8_t node_index;
+  uint8_t current_minimum = 1;
+
+//
+// Current implementation assumes that the first node is the access point/source
+// If this is not the case, then it will ALWAYS be the minimum, which is bad
+//
+#warning Fix minimum calculation
 
   s_mean_energy = 0;
 
@@ -153,21 +138,17 @@ energy_t compute_mean_energy( uint8_t source_id )
   {
     if( s_nodes.nodes[node_index].id != source_id )
     {
-      s_mean_energy += s_nodes.nodes[node_index].energy;
+      if( s_nodes.nodes[node_index].energy < 
+                        s_nodes.nodes[current_minimum].energy )
+      {
+        current_minimum = node_index;
+      }
+      
     }
   }
-
-  // Compute mean
-  s_mean_energy /= (s_nodes.current_nodes - 1);
-
-  // Subtract mean energy from node energy to 'equalize' and avoid overflows
-/*  for( node_index = 0; node_index < s_nodes.current_nodes; node_index++ )
-  {
-    if( s_nodes.nodes[node_index].id != source_id )
-    {
-      s_nodes.nodes[node_index].energy -= s_mean_energy;
-    }
-  }  */
+  
+  // Select the current minimum
+  s_mean_energy = s_nodes.nodes[current_minimum].energy;
 
   return s_mean_energy;
 }
@@ -256,7 +237,7 @@ node_t* node_with_smallest_distance( )
 //
 // Run Dijkstra's algorithm
 //
-uint8_t dijkstra( uint8_t source_id )
+uint8_t dijkstra( uint8_t source_id, energy_t c_factor )
 {
   uint8_t node_index;
   uint8_t link_index;
@@ -267,6 +248,9 @@ uint8_t dijkstra( uint8_t source_id )
 
   energy_t possible_distance;
   energy_t current_cost;
+
+  // Find node with the smallest energy
+  energy_t current_minimum = find_min_energy( source_id );
 
   // Update round count
   current_round += 1;
@@ -305,7 +289,6 @@ uint8_t dijkstra( uint8_t source_id )
   // Start with distance of 0, since it is the starting point
   //
   p_source_node->distance = 0;
-
 
 #ifdef DEBUG_D_ON
   printf("Start main loop.\n"); // DEBUG
@@ -369,21 +352,32 @@ uint8_t dijkstra( uint8_t source_id )
 #ifdef DEBUG_D_ON
         printf("  Found link "); // DEBUG
         print_link( p_current_link ); // DEBUG
-        printf("\n"); // DEBUG
 #endif
 
         // Make sure we don't go backwards
         if( ! p_destination_node->visited )
         {
+          //
+          // Cost calculation formula
+          // cost = link_power * ( 1 + ( node_energy / min_node_energy )^C )
+          //
+      
           // Calculate the current cost of the link
-          current_cost = p_source_node->energy + p_current_link->links_power;
-          current_cost /= current_round;
-          current_cost -= s_mean_energy /( current_round - 1 );
+          current_cost = 1 + 
+            pow( ( p_source_node->energy / current_minimum ), c_factor ) ;
+          
+          // Normalize
+          current_cost /= ( 2 );          
+          
+          current_cost *= p_current_link->links_power;
 
-#ifdef REGULAR_DIJKSTRA
-          current_cost = p_current_link->links_power;
+#ifdef DEBUG_D_ON
+        printf(" Link power,link_cost=%g,%g\n",p_current_link->links_power, current_cost); // DEBUG
 #endif
-
+          
+          //print_link(p_current_link);
+          //printf( "\t%g \n", current_cost );
+          
           //
           // Compute the possible distance for destination if current link is used
           //

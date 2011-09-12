@@ -31,11 +31,18 @@ static energy_t previous_powers[MAX_DEVICES];
 static energy_t previous_powers_debug[MAX_DEVICES];
 uint8_t route_table_debug[MAX_DEVICES];
 
+energy_t c_factor;
+
 FILE *fp_energies, *fp_routes, *fp_powers, *fp_rssi, *fp_debug;
 
 #define AP_NODE_ID (MAX_DEVICES+1)
 
-uint8_t routing_initialize( )
+/*******************************************************************************
+ * @fn    uint8_t routing_initialize( energy_t dijkstra_c_factor )
+ *
+ * @brief Open all debugging files and initialize routing system
+ * ****************************************************************************/
+uint8_t routing_initialize( energy_t dijkstra_c_factor )
 {
   char node_id_string[3];
   uint8_t node_index;
@@ -76,6 +83,9 @@ uint8_t routing_initialize( )
     return 1;
   }
 
+  // Store c_factor for later use
+  c_factor = dijkstra_c_factor;
+
   target_rssi = dbm_to_watt(-60l);
 
   // Add nodes
@@ -107,6 +117,11 @@ uint8_t routing_initialize( )
   return 0;
 }
 
+/*******************************************************************************
+ * @fn    void routing_finalize()
+ *
+ * @brief Call when finished. Close all files.
+ * ****************************************************************************/
 void routing_finalize()
 {
   fclose( fp_energies );
@@ -116,6 +131,11 @@ void routing_finalize()
   fclose( fp_debug );
 }
 
+/*******************************************************************************
+ * @fn    void *compute_routes_thread( void *rp_tables )
+ *
+ * @brief Thread that takes care of routing
+ * ****************************************************************************/
 void *compute_routes_thread( void *rp_tables )
 {
   static uint32_t index;
@@ -136,7 +156,7 @@ void *compute_routes_thread( void *rp_tables )
     add_links_from_table( rssi_table );
 
     // Run dijkstra's algorithm with 0 being the access point
-    dijkstra( AP_NODE_ID );
+    dijkstra( AP_NODE_ID, c_factor );
 
     // Display shortest paths and update energies
     for( node_index = 1; node_index < (MAX_DEVICES + 1); node_index++ )
@@ -154,9 +174,6 @@ void *compute_routes_thread( void *rp_tables )
 
     // Compute power table
     compute_required_powers( link_powers, power_table );
-
-    // Compute engergy mean and subtract from each individual mean
-    compute_mean_energy( AP_NODE_ID );
 
     print_rssi_table();
 
@@ -213,7 +230,7 @@ uint8_t parse_table ( uint8_t p_rssi_table[][MAX_DEVICES+1] )
         tx_power = dbm_to_watt( previous_powers[col_index + 1] );
       }
 
-      //tx_power = dbm_to_watt( 1.5l ); // uncomment for no power control
+      //tx_power = dbm_to_watt( 1.5l ); // uncomment to override
 
       // Compute the minimum power required to meet this link with 'target_rssi'
       // alpha is the channel attenuation, that is received/transmitted power
@@ -230,11 +247,14 @@ uint8_t parse_table ( uint8_t p_rssi_table[][MAX_DEVICES+1] )
 }
 
 /*******************************************************************************
- * @fn    uint8_t parse_table_d ( energy_t p_rssi_table[][MAX_DEVICES+1] )
+ * @fn    uint8_t parse_table_d ( energy_t p_rssi_table[][MAX_DEVICES+1]
+ *                                            energy_t *p_previous_powers )
  *
- * @brief Get RSSI table, convert, store and print it (gets energy_t rssi array)
+ * @brief Get RSSI table, convert, store and print it 
+ * (gets energy_t rssi array AND energy_t previous tx power array)
  * ****************************************************************************/
-uint8_t parse_table_d ( energy_t p_rssi_table[][MAX_DEVICES+1] )
+uint8_t parse_table_d ( energy_t p_rssi_table[][MAX_DEVICES+1], 
+                                      energy_t *p_previous_powers )
 {
   uint8_t row_index;
   uint8_t col_index;
@@ -257,10 +277,10 @@ uint8_t parse_table_d ( energy_t p_rssi_table[][MAX_DEVICES+1] )
       else
       {
         // Use previous transmit settings
-        tx_power = dbm_to_watt( previous_powers[col_index + 1] );
+        tx_power = dbm_to_watt( p_previous_powers[col_index + 1] );
       }
 
-      //tx_power = dbm_to_watt( 1.5l ); // uncomment for no power control
+      tx_power = dbm_to_watt( 1.5l ); // uncomment for no power control
 
       // Compute the minimum power required to meet this link with 'target_rssi'
       // alpha is the channel attenuation, that is received/transmitted power
@@ -336,6 +356,12 @@ void add_links_from_table( energy_t rssi_table[][MAX_DEVICES+1] )
   }
 }
 
+/*******************************************************************************
+ * @fn    void compute_required_powers( energy_t* p_link_powers,
+ *                                                      uint8_t* power_table )
+ *
+ * @brief Compute required power to meet the selected links
+ * ****************************************************************************/
 void compute_required_powers( energy_t* p_link_powers, uint8_t* power_table )
 {
   uint8_t node_index;
@@ -356,6 +382,11 @@ void compute_required_powers( energy_t* p_link_powers, uint8_t* power_table )
   }
 }
 
+/*******************************************************************************
+ * @fn    void print_rssi_table()
+ *
+ * @brief Save current data to files
+ * ****************************************************************************/
 void print_rssi_table()
 {
   uint8_t row_index;
@@ -436,7 +467,11 @@ void print_rssi_table()
   fprintf( fp_powers, "\n" );
 }
 
-
+/*******************************************************************************
+ * @fn    energy_t get_power_from_setting( uint8_t setting )
+ *
+ * @brief Provide cc2500 and function returns tx power in dBm
+ * ****************************************************************************/
 energy_t get_power_from_setting( uint8_t setting )
 {
   uint8_t index;
