@@ -22,7 +22,8 @@
 #warning MAX_DEVICES not defined, defaulting to 3
 #endif
 
-void read_line( char*, energy_t* );
+void read_energy_line( char*, energy_t* );
+uint8_t read_power_line ( FILE* , energy_t* );
 uint8_t read_table( FILE* , energy_t p_rssi_table[][MAX_DEVICES+1] );
 void *graph_thread();
 void sigint_handler( int32_t sig );
@@ -43,26 +44,40 @@ static volatile uint8_t *power_table = &rp_tables[MAX_DEVICES];
 
 int32_t main ( int32_t argc, char *argv[] )
 {
-  FILE *fp_in;
+  FILE *fp_rssi;
+  FILE *fp_powers;
   int32_t rc;
+  uint8_t node_index;
   energy_t rssi_table[MAX_DEVICES+1][MAX_DEVICES+1];
-
+  energy_t previous_powers[MAX_DEVICES];
+  uint32_t sample_limit = 10000;
+  
   // Handle interrupt events to make sure files are closed before exiting
   (void) signal( SIGINT, sigint_handler );
 
   // Make sure the filename is included
-  if ( argc < 3 )
+  if ( argc < 4 )
   {
-    printf( "Usage: %s infile [graph (0,1)]\r\n", argv[0] );
+    printf( "Usage: %s rssi.csv powers.csv C(0.0-1.0) [graph (0,1)]\r\n"
+                                                                    , argv[0] );
     return 1;
   }
+  
+  // Open input rssi csv file
+  fp_rssi = fopen( argv[1], "r" );
 
-  // Open input csv file
-  fp_in = fopen( argv[1], "r" );
-
-  if( NULL == fp_in )
+  if( NULL == fp_rssi )
   {
-    printf( "Error opening input file.\r\n" );
+    printf( "Error opening rssi input file.\r\n" );
+    return 1;
+  }
+  
+  // Open input rssi csv file
+  fp_powers = fopen( argv[2], "r" );
+
+  if( NULL == fp_powers )
+  {
+    printf( "Error opening tx powers input file.\r\n" );
     return 1;
   }
   
@@ -70,7 +85,16 @@ int32_t main ( int32_t argc, char *argv[] )
   memset( (uint8_t*)power_table, 0xff, MAX_DEVICES );
   memset( (uint8_t*)routing_table, ( MAX_DEVICES + 1 ), MAX_DEVICES );
   
-  if ( routing_initialize() )
+  // Initialize previous_powers table
+  for( node_index = 0; node_index < MAX_DEVICES; node_index++ )
+  {
+
+    // Initialize previous power to maximum
+    previous_powers[node_index] =
+                    power_values[sizeof(power_values)/sizeof(energy_t) - 1];
+  }
+  
+  if ( routing_initialize( (energy_t)strtod( argv[3], NULL ) ) )
   {
     printf("Error initializing routes.\n");
     exit(-1);
@@ -102,10 +126,10 @@ int32_t main ( int32_t argc, char *argv[] )
   // Lock this before starting
   pthread_mutex_lock ( &mutex_route_done );
 
-  while( read_table( fp_in, rssi_table ) )
+  while( read_table( fp_rssi, rssi_table ) && sample_limit-- )
   {
 
-    parse_table_d( rssi_table );
+    parse_table_d( rssi_table, previous_powers );
   
     // Let the routing algorithm run
     pthread_mutex_unlock ( &mutex_route_start );
@@ -114,26 +138,33 @@ int32_t main ( int32_t argc, char *argv[] )
     pthread_mutex_lock ( &mutex_route_done );
 
     // Only graph when asked to
-    if ( argv[2][0] == '1')
+    if ( argv[4][0] == '1')
     {
       // Start generating the graph
       pthread_mutex_unlock ( &mutex_graph );
     }
+    
+    // Read previous powers
+    if( !read_power_line ( fp_powers, previous_powers ) )
+    {
+      printf("Error reading from power file!");
+    }
 
- 
+    sample_limit--;
   }
 
-  fclose( fp_in );
+  fclose( fp_powers );
+  fclose( fp_rssi );
 
   return 0;
 }
 
 /*******************************************************************************
- * @fn    void read_line ( char* csv_line, int8_t* rssi_line )
+ * @fn    void read_energy_line ( char* csv_line, int8_t* rssi_line )
  *
  * @brief Parse line from csv file an populate array row with contents
  * ****************************************************************************/
-void read_line ( char* csv_line, energy_t* rssi_line )
+void read_energy_line ( char* csv_line, energy_t* rssi_line )
 {
   char *p_item;
   uint16_t item_index = 0;
@@ -147,6 +178,39 @@ void read_line ( char* csv_line, energy_t* rssi_line )
     item_index++;
     p_item = strtok( NULL, "," );
   }
+}
+
+/*******************************************************************************
+ * @fn    uint8_t read_power_line ( FILE* fp_powers, energy_t* power_line )
+ *
+ * @brief Parse line from csv file an populate array row with contents
+ * ****************************************************************************/
+uint8_t read_power_line ( FILE* fp_powers, energy_t* power_line )
+{
+  char csv_line[INBUFSIZE];   // Buffer for reading a line in the file
+  char *p_item;
+  uint16_t item_index = 0;
+  printf("Reading power line\n");
+  if ( NULL != fgets( csv_line, sizeof(csv_line), fp_powers ) )
+  {
+    p_item = strtok( csv_line, "," );
+    while( ( NULL != p_item ) && ( item_index < MAX_DEVICES ) )
+    {
+      p_item = strtok( NULL, "," );
+    
+      // Convert string to RSSI value and store in rssi_line
+      power_line[item_index] = (energy_t)strtod( p_item, NULL );
+      printf( "%g ", power_line[item_index] );
+      item_index++;
+      
+    }
+    printf("\n");
+    // Read table successfully
+    return 1;
+  }
+  
+  // Did NOT read table successfully
+  return 0;
 }
 
 /*******************************************************************************
@@ -175,7 +239,7 @@ uint8_t read_table ( FILE* fp_csv_file, energy_t p_rssi_table[][MAX_DEVICES+1] )
       csv_line[(int32_t)strlen(csv_line)-1] = 0;
 
       // Parse csv line and populate array
-      read_line( csv_line, p_rssi_table[line_index] );
+      read_energy_line( csv_line, p_rssi_table[line_index] );
     }
 
     if( line_index > MAX_DEVICES )
