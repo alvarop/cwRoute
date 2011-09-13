@@ -12,7 +12,7 @@
 #define BUFFER_SIZE ( 512 )
 
 // Function Prototypes
-void process_packet( uint8_t*, uint32_t );
+uint8_t process_packet( uint8_t*, uint32_t );
 
 void sigint_handler( int32_t sig );
 
