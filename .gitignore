@@ -1,5 +1,7 @@
 *.[oa]
 *~
+*.csv
+*.dat
 *.aux
 *.log
 *.toc
