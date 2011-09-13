@@ -41,16 +41,16 @@ for line in fileinput.input():
       print "Processing ", line
       scriptfile = open( scriptfilename,'w')
       
-      scriptfile.write("# gnuplot script for '" + datafilename + "'\n")
-      scriptfile.write("set terminal svg size 640,480 dynamic enhanced fname 'arial'\n")
-      scriptfile.write("set output 'plots/svg/" + dirs[len(dirs)-2] + ".svg'\n")
+      scriptfile.write("# gnuplot script for '" + datafilename + "'\n")  
       scriptfile.write("set title '" + dirs[len(dirs)-2] +  "'\n")
       scriptfile.write("set xlabel 'Time (s)'\n")
       scriptfile.write("set ylabel 'Power Used (mW)'\n")
       scriptfile.write("plot '" + datafilename + "' using 1:2 with lines title 'Average'\n")
       for ed in range(1,max_devices+1):
         scriptfile.write("replot '" + datafilename + "' using 1:" + str(ed + 2) + " with lines title 'ED" + str(ed) + "'\n")
-      
+      scriptfile.write("set terminal svg size 640,480\n")
+      scriptfile.write("set output 'plots/svg/" + dirs[len(dirs)-2] + ".svg'\n")
+      scriptfile.write("replot\n")
       scriptfile.write("set terminal png size 640,480\n")
       scriptfile.write("set output 'plots/png/" + dirs[len(dirs)-2] + ".png'\n")
       scriptfile.write("replot\n")
