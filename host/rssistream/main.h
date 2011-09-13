@@ -18,7 +18,7 @@
 #define SYNC_BYTE   ( 0x7E )
 #define ESCAPE_BYTE ( 0x7D )
 
-#define MAX_DEVICES (6)
+#define MAX_DEVICES (3)
 
 #define BROADCAST_ADDRESS (0x00)
 

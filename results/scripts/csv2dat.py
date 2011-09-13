@@ -8,7 +8,7 @@
 import csv
 import fileinput
 for line in fileinput.input():
-    if 'energies.csv' in line:
+    if '.csv' in line:
       line = line.replace('\n','')
       print "Processing ", line
       #open output file
