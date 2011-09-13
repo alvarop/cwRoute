@@ -12,20 +12,20 @@ static int32_t serial_port_number;
 
 uint8_t packet_in_buffer( uint8_t* );
 uint16_t find_and_escape_packet( uint8_t*, uint8_t* );
-static void dummy_callback( uint8_t* buffer, uint32_t size );
+static uint8_t dummy_callback( uint8_t* buffer, uint32_t size );
 
-static void (*serial_read_callback)( uint8_t*, uint32_t ) = dummy_callback;
+static uint8_t (*serial_read_callback)( uint8_t*, uint32_t ) = dummy_callback;
 
 #define SYNC_BYTE   ( 0x7E )
 #define ESCAPE_BYTE ( 0x7D )
 
 /*******************************************************************************
  * @fn     uint8_t serial_open( int32_t port_number, int32_t baud_rate,
- *                                     void (*callback)( uint8_t*, uint32_t) )
+ *                                     uint8_t (*callback)( uint8_t*, uint32_t) )
  * @brief  Open serial port
  * ****************************************************************************/
 uint8_t serial_open( int32_t port_number, int32_t baud_rate,
-                                       void (*callback)( uint8_t*, uint32_t) )
+                                       uint8_t (*callback)( uint8_t*, uint32_t) )
 {
   serial_port_number = port_number;
   // Use RS232 library to open serial port
@@ -115,8 +115,17 @@ void *serial_read_thread()
 
         if( new_packet == 1 )
         {
+          // Call serial callback. If it returns 0, flush the buffer
+          if ( !serial_read_callback( final_buffer, (bytes_read-1) ) )
+          {
+            // Wait ~250ms
+            usleep(250000);
+            // Flush the port
+            while( PollComport( serial_port_number, serial_buffer, 
+                                                                BUFFER_SIZE ) );
 
-          serial_read_callback( final_buffer, (bytes_read-1) );
+            memset( serial_buffer, 0x00, sizeof(serial_buffer) );
+          }
 
           new_packet = 0;
           memset( packet_buffer, 0x00, sizeof(packet_buffer) );
@@ -247,11 +256,12 @@ void send_serial_message( uint8_t* packet_buffer, int16_t buffer_size )
 }
 
 /*******************************************************************************
- * @fn    void dummy_callback( uint8_t* buffer, uint32_t size )
- * @brief  Dummy function so the callback function isn't initially NULL
+ * @fn    uint8_t dummy_callback( uint8_t* buffer, uint32_t size )
+ * @brief Dummy function so the callback function isn't initially NULL
  * ****************************************************************************/
-void dummy_callback( uint8_t* buffer, uint32_t size )
+uint8_t dummy_callback( uint8_t* buffer, uint32_t size )
 {
   // Do nothing
+  return 0;
 }
 

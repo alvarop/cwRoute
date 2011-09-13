@@ -19,6 +19,8 @@
 #warning MAX_DEVICES not defined, defaulting to 3
 #endif
 
+#define MAX_ROUNDS (3000)
+
 void send_serial_message( uint8_t* packet_buffer, int16_t buffer_size );
 void *graph_thread();
 
@@ -40,14 +42,16 @@ static volatile uint8_t *power_table = &rp_tables[MAX_DEVICES];
 int main( int argc, char *argv[] )
 {
   int32_t rc;
+  int32_t timeout;
 
   // Handle interrupt events to make sure files are closed before exiting
   (void) signal( SIGINT, sigint_handler );
-
+  
   // Make sure input is correct
-  if( argc < 3 )
+  if( argc < 6 )
   {
-    printf("Usage: %s port baudrate [graph (0,1)]\n", argv[0]);
+    printf("Usage: %s port baudrate C(0.0-1.0) [graph (0,1)] timeout\n", 
+                                                                      argv[0]);
     return 0;
   }
 
@@ -60,11 +64,17 @@ int main( int argc, char *argv[] )
     exit(-1);
   }
 
+  timeout = atoi( argv[5] );
+  printf("Data collection will start in ~%d seconds...\n", timeout);
+
+  sleep(timeout);
+  system("banshee --play");
+
   // Initialize routing an power tables
   memset( (uint8_t*)power_table, 0xff, MAX_DEVICES );
   memset( (uint8_t*)routing_table, ( MAX_DEVICES + 1 ), MAX_DEVICES );
 
-  if ( routing_initialize() )
+  if ( routing_initialize( (energy_t)strtod( argv[3], NULL ) ) )
   {
     printf("Error initializing routes.\n");
     exit(-1);
@@ -100,10 +110,12 @@ int main( int argc, char *argv[] )
     exit(-1);
   }  
 
+  uint32_t round = 0;
+
   for(;;)
   {
     //uint8_t index;
-
+    
     // Wait until routing is done
     pthread_mutex_lock ( &mutex_route_done );
 
@@ -111,7 +123,7 @@ int main( int argc, char *argv[] )
     send_serial_message( (uint8_t *)rp_tables, sizeof(rp_tables) );
 
     // Only graph when asked to
-    if ( argv[3][0] == '1')
+    if ( argv[4][0] == '1')
     {
       // Start generating the graph
       pthread_mutex_unlock ( &mutex_graph );
@@ -131,6 +143,16 @@ int main( int argc, char *argv[] )
       printf( "%02X ", power_table[index] );
     }
     printf("\n");*/
+    //printf("Round %d\n", round);
+    
+    // Stop collecting data after MAX_ROUNDS
+    if(round == MAX_ROUNDS)
+    {
+      sigint_handler( 0 );
+    }
+    
+    round++;
+    
   }
 
 
@@ -141,14 +163,14 @@ int main( int argc, char *argv[] )
  * @fn     void process_packet( uint8_t* buffer, uint32_t size )
  * @brief  Process incoming serial packet
  * ****************************************************************************/
-void process_packet( uint8_t* buffer, uint32_t size )
+uint8_t process_packet( uint8_t* buffer, uint32_t size )
 {
   uint8_t rssi_table[MAX_DEVICES+1][MAX_DEVICES+1];
 
   if( size < sizeof(rssi_table) )
   {
-    printf( "Received packet smaller than RSSI table\r\n" );
-    return;
+    printf( "Received packet smaller than RSSI table (%d)\r\n", size );
+    return 0;
   }
 
   memcpy( rssi_table, buffer, sizeof(rssi_table) );
@@ -158,7 +180,7 @@ void process_packet( uint8_t* buffer, uint32_t size )
   // Let the routing algorithm run
   pthread_mutex_unlock ( &mutex_route_start );
 
-  return;
+  return 1;
 }
 
 /*******************************************************************************
@@ -259,7 +281,10 @@ void sigint_handler( int32_t sig )
 
     // Close the serial port
     serial_close();
-
+    
+    // Stop playing music
+    system("banshee --pause");
+    
     printf("\nExiting...\n");
     exit(sig);
 }
