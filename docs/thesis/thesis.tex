@@ -1,0 +1,107 @@
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\title{Masters Thesis}
+\author{Alvaro Prieto}
+\maketitle
+
+\pagebreak
+
+\tableofcontents
+
+\pagebreak
+
+\section{Introduction}
+
+% Include literature survey from other file
+\input{sources/literature_survey} %uncomment to include literature survey
+
+
+\section{Software Libraries}
+One of the primary contributions of this project consists of software libraries for working with WBANs. Due to the project requirements, a choice was made to use free and open source tools, as opposed to proprietary software. Because of this choice, most of the radio libraries had to be either ported or re-written from scratch. There were two main hardware devices that were targeted in these libraries. The first consisted of a CC430 device, which has a built in 915MHz radio. The second was an MSP430 with an external CC2500 2.4GHz radio.
+
+\subsection{Project History}
+The first software libraries were initially developed by Corey Provencher, a student at RIT, for a senior design project. He developed a hardware board with a variety of sensors to measure body movements and the corresponding software to use it. All of his software development was done using the Texas Instruments (TI) software tools on Windows(TM).
+
+Jeffery Robble, another student, took over and ported most of the code to use Linux based open source tools. The code ported over by Robble used TI's radio stack \emph{SimpliciTI}. Unfortunately, SimpliciTI was too complex and resource heavy to do time-sensitive operations, like clock synchronization, over the radio. It also required the use of other TI software libraries in order to work.
+
+After Robble left, the work continued. The main goal of the project at the time was to develop wireless electrocardiogram(ECG)(Section~\ref{section:wirelessecg}). While planning for the wireless ECG, a decision was made to develop an entire WBAN platform that could later be used for other projects. The new platform would be developed in-house and included both hardware and software. Because of this, the entire library was to be written from the ground up. This would prevent any rights issues from coming up if published.
+
+\subsection{Design Choices}
+The decision to write all software libraries from scratch was not an easy one. Initially the SimpliciTI libraries were modified to try and meet the project needs, but this proved to be a complex task. Due to the simple nature of the planned WBAN, a much less complex approach could be used. The main application only required streaming data from various wireless sensors.$\ll$ Should I elaborate on the design constraints here? The number of devices is known, the time of transmission is known etc...$\gg$ This could be accomplished with a very minimal radio library.
+
+\subsection{CC430 Device}
+The first device used in this project was Provencher's initial hardware platform. Due to the limited quantities of that device, a new version of the hardware platform was developed. The new device removed all unused sensors from the board to minimize its footprint. It included a CC430 device with a 32.768Khz crystal oscillator for precise timekeeping. The analog-to-digital(A/D) ports were used to attach any needed sensors. 
+
+Libraries were written for serial communication, visual indicators, analog measurements, time synchronization and radio communications. The serial communication was used to transmit data to the host computer, while the rest were used in the wireless ECG application.
+
+\subsection{MSP430-RF2500 Device}
+The second major hardware platform was the MSP430-RF2500. This device is manufactured by TI and sold as a development platform. The MSP430-RF2500 device consists of an MSP430 microcontroller and a CC2500 radio. There were several reasons why this device was used. The primary use for the MSP430-RF2500 was to develop the libraries to use the CC2500 radio. The next planned hardware platform for the project consisted of a CC430 with a CC2500. The previous software libraries would need to be expanded to include a second radio for communication.
+
+Unlike the CC430, which has a radio core built in, the CC2500 is a standalone unit. In order to expedite the software development process, a working platform was needed. Software development new, untested, hardware is not a feasible option. Debugging both hardware and software simultaneously is not a good idea.
+
+The previously developed CC430 libraries were ported to work with the MSP430 microcontroller and expanded to use the CC2500 radio. Features of the new radio libraries include power control, addressing and channel switching.
+
+\section{Specialized Cost Function for Maximizing Body Area Networks Lifetime Using Global Routing Algorithms}
+$\ll$ Insert most of the paper here. $\gg$
+
+
+\section{Wireless ECG Application}\label{section:wirelessecg}
+\subsection{Description}
+The main goal of the Wireless ECG application is to produce the equivalent output of a traditional, wired, 12-lead ECG using three wireless sensors. 
+
+The three main parts of the project are: 
+\begin{itemize}
+\item Developing the analog front-end to measure the biopotential signals from the subject.
+\item Developing the software/firmware libraries to measure, store, and transmit the data from the EDs to the host.
+\item Developing the lead reconstruction algorithms to convert the 3 measurements back to a physician friendly 12-lead display.
+\end{itemize}
+The work presented here focuses on the software/firmware development for the application.
+
+
+\subsection{TinyOS Platform}
+The first wireless ECG platform was developed using the Imperial College London BSN Motes running TinyOS. These devices 
+
+
+\subsection{CC430 Platform}
+
+\subsection{Time Synchronization}
+The method used compensates for time offsets between samples and minimizes the effect of clock drift by periodically synchronizing independent clock sources together. Figure~\ref{fig:network_layout} shows an example system consisting of three end devices (\emph{ED}s), one access point (\emph{AP}) and one host computer. 
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=0.4\textwidth]{figures/network-map-test2.pdf}
+\end{center}
+\caption{Test Network Layout}
+\label{fig:network_layout}
+\end{figure}
+All devices have a timer used for time-stamping and synchronization. All events, including samples and data transfers, occur according to the value of the timer. Due to certain hardware limitations, the value of the timer cannot be altered, it can only be reset to zero. This does not, in any way, affect the synchronization of devices.
+
+The timer inside the \emph{AP} can be considered the primary, or global, timer. The goal is to synchronize all \emph{ED}, or local, timers with the global timer. Whenever the global timer reaches its maximum value, and rolls over back to zero, the \emph{AP} sends a broadcast synchronization beacon instructing each end device it is time zero. When an \emph{ED} receives this message, it compares its current timer value to zero, to calculate the clock drift, and resets it to zero. This ensures that all \emph{ED} timers are aligned, which then allows measurements to occur at close to the same time.
+
+While many, more precise, time synchronization methods are available~\cite{synchronization:FTSP}, it was determined that they were not needed. Due to the low sampling rate and the use of crystal oscillators to run the timers, the precision obtained with this simple method was good enough for the system. More complex methods would not have significantly improved results.
+
+\subsection{Scheduling}
+A round robin-like scheme is used to poll devices in the network. It focuses on simplicity and portability.
+
+In previous implementations, each \emph{ED} was polled individually for sampled data, which required all \emph{ED}s to be on at all times. Once all device clocks are synchronized, polling is no longer necessary. Instead of sending poll messages to each device, the \emph{AP} just listens for \emph{ED} transmissions. The \emph{ED}s will wake up when they are scheduled to transmit and send the required data automatically. This method greatly reduces the power consumption of both \emph{AP} and \emph{ED}s. After initialization, the \emph{AP} only needs to send a periodic time synchronization beacon and the collected data back to the host computer. Once synchronized, end devices will only need to turn their receiver on around the time the synchronization beacon is expected.
+
+Figure~\ref{fig:system_schedule} shows a sample system schedule. The figure shows the time each device is on, and the state of each radio. The ``sleep'' time for each \emph{ED} does not show when a device wakes up to sample data. In this specific case, the \emph{AP} has one extra time-slot allotted for a fourth \emph{ED}.
+
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=1\textwidth]{figures/sync_schedule.pdf}
+\end{center}
+\caption{System Schedule}
+\label{fig:system_schedule}
+\end{figure}
+
+Certain devices can further reduce power consumption by sampling without using the main processor. This works by using direct-memory access(\emph{DMA}) which allows the analog-to-digital converter(\emph{ADC}) to store measurements in memory without first going through the processor. Using this method, Figure~\ref{fig:system_schedule} accurately presents the time each \emph{ED} is powered on. Sampling with DMA has not been implemented in the current wireless ECG platform.
+
+\subsection{Host Interface}
+
+
+\section{Conclusion}
+
+\bibliography{sources/thesis.bib}{}
+\bibliographystyle{plain}
+\end{document}
