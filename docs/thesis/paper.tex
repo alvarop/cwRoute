@@ -8,7 +8,7 @@
 \maketitle
 
 \begin{abstract}
-$\ll$ at the end $\gg$
+TODO
 \end{abstract}
 
 \section{Introduction}
@@ -20,7 +20,7 @@ For the purpose of this paper, \textbf{network lifetime} is defined as the time 
 
 In this contribution we propose a novel routing algorithm that focuses not on single devices, but the network as a whole. Current methods focus on maximizing individual device lifetime or minimizing the energy-per-bit. While those are generally good goals, certain systems require all devices functioning to be considered operational. Keeping that in mind, the proposed system maximizes the network lifetime by normalizing power use across the network.
 
-$\ll$”In this contribution we …. (elaborate on title), describe the algorithm (“in contradistinction to previous routing approached, we define a cost function based on the deviation of the accumulated energy of a single node from the overall average power…”), summary of work (real RSSI data + simulation and hardware implementation using TI 2.4, comparison approach, network lifetime and energy per bit…), summary of results.”$\gg$ 
+In order to provide accurate channel conditions, RSSI measurements of an eight ED network were used as input to our simulations(\ref{sec:simulation}). Real-time hardware implementations were also run to demonstrate the algorithm(\ref{sec:hardware}). The new cost function succeeded in improving network lifetimes when run in a dynamic environment. Static environments did not produce successful results.
 
 \begin{figure}[!htb]
 \begin{center}
@@ -37,7 +37,7 @@ In the proposed system, we define a new link cost function that is then used in 
 Each device's normalized energy use is calculated as shown in Equation~\ref{eqn:accumulated_energy}, where $j$ denotes the device ID, $i$ is the current polling round, $\alpha_{j,k}$ is the channel attenuation for the selected link, and $RSSI^T$ is the target RSSI. The current energy used is incremented by the energy used to transmit a single packet while maintaining $RSSI^T$. The channel attenuation for the selected link,$\alpha_{j,k}$, can be seen in Equation~\ref{eqn:alpha}, where RSSI is the received power measured by device $k$ and $P_{tx}$ is the transmitted power used by device $j$. 
 
 \subsection{Link Cost}
-The actual link cost is computed by calculating the energy used by the device, \emph{if} that link is selected, and multiplying by a cost factor(Equation~\ref{eqn:link_cost}). The cost factor calculation takes the energy used by the destination device, $E^k_i$, and divides it by the current energy minimum, $E^{min}_{i}$, which is the energy used by the device with the minimum energy used by round $i$. This ratio is then raised to the power $M$, which determines how strong the effect will be $\ll$Need a better way of saying this..$\gg$. If a device's energy is much greater than the current minimum, it will be avoided as a relay.
+The actual link cost is computed by calculating the energy used by the device, \emph{if} that link is selected, and multiplying by a cost factor(Equation~\ref{eqn:link_cost}). The cost factor calculation takes the energy used by the destination device, $E^k_i$, and divides it by the current energy minimum, $E^{min}_{i}$, which is the energy used by the device with the minimum energy used by round $i$. This ratio is then raised to the power $M$, which determines how strong the effect will be. If a device's energy is much greater than the current minimum, it will be avoided as a relay.
 The $M$ factor in Equation~\ref{eqn:link_cost} can be any number in $0 < M < \infty$. The cost factor is normalized so when $M=0$, it returns to the traditional cost of required power to meet the link.
 
 Since the link costs are directly related to the destination device, they are calculated during the routing algorithm computation. For this paper, Dijkstra's algorithm~\cite{dijkstra:algorithm} is used to select the best route.
@@ -63,22 +63,77 @@ In what follows, we analyze the performance of the proposed cost function. The n
 
 Performance is determined by the time it takes any node's accumulated normalized energy to cross an arbitrary threshold. The threshold could be equivalent to the amount of energy stored in a device battery, but for this experiment, is purely arbitrary. 
 
-$\ll$”in what follows we …. (state simulation and hardware), implementation of cost function in Dijktra (ref),step wide pseudo code for algorithm, comparison approach to “normal” cost function with Dijkstra$\gg$
-
 \subsection{Algorithm Implementation}
-Detailed pseudo-code for the routing algorithm can be found in Algorithm~\ref{alg:dijkstra} in Appendix~\ref{appendix:algorithms}. Similarly, code for energy used calculation can be found in Algorithm~\ref{alg:energyused}.
+Detailed pseudo-code for the routing algorithm can be found in Algorithm~\ref{alg:dijkstra}. Similarly, code for energy used calculation can be found in Algorithm~\ref{alg:energyused}.
 
-\section{Simulation}
-$\ll$describe experimental setups and environment (2 setup – walking in room and sitting in from of desk), figure 2 (residential environment for setups)$\gg$
+\begin{algorithm}[!ht]
+\caption{Dijkstra's Algorithm with new cost function}
+\label{alg:dijkstra}
+\begin{algorithmic}[1]
+\FOR{$i = 1$ to \# of Nodes} 
+	\STATE $node_i.visited \leftarrow 0$
+	\STATE $node_i.distance \leftarrow \infty$
+	\STATE $node_i.previous \leftarrow node_i$
+\ENDFOR
+\STATE $node_{AP}.distance \leftarrow 0$
+\STATE $energy_{min} = min(node.energy)$
+\WHILE{unvisited nodes available}
+	\STATE $node_{source} \leftarrow $ node with smallest distance
+	\FOR{$i = 1$ to \# of Links}
+		\IF{$link_i.source = node_{source}$}
+			\STATE $node_{dest} \leftarrow link_i.destination$
+			\IF{$node_{dest}.visited = 0$}
+				\STATE $cost \leftarrow link_i.power * (1 + node_{dest}.energy/energy_{min} )^M/2$
+				\STATE $newdistance \leftarrow node_{source}.distance + cost$
+				\IF{$distance < node_{dest}.distance$} 
+				\STATE$node_{dest}.distance \leftarrow newdistance$
+				\STATE$node_{dest}.previous \leftarrow node_{source}$
+				\ENDIF
+			\ENDIF
+		\ENDIF
+	\ENDFOR
+	\STATE $node_{source}.visited \leftarrow 1$
+\ENDWHILE
+\end{algorithmic}
+\end{algorithm}
 
-\section{Hardware Implementation}
+\begin{algorithm}[!ht]
+\caption{Energy Used Calculation}
+\label{alg:energyused}
+\begin{algorithmic}[1]
+\FOR{$i = 1$ to \# of Nodes}
+	\STATE $node_{ptr} = node_i$
+	\IF{$node_{ptr}.previous = node_{ptr}$}
+		\STATE No path to $node_i$
+	\ELSE
+		\WHILE{$node_{ptr}.previous \neq node_{ptr}$}
+			\STATE $link_{ptr} \leftarrow $ link between $node_{ptr}$ and $node_{ptr}.previous$
+			\STATE $node_{ptr}.energy += link_{ptr}.power$
+			\STATE $node_{ptr} \leftarrow = node_{ptr}.previous$
+		\ENDWHILE
+	\ENDIF
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+
+\section{Simulation}\label{sec:simulation}
+In order to test the new cost function in an efficient manner, a simulation was used. Measurements of real channel data were acquired by running the procedure described in~\ref{subsec:cycleofoperations} without the routing or power control enabled. Each ED continuously sampled RSSI data from all other devices and transmitted it to the host. 
+
+Two experimental setups were used to capture RSSI data. For the first, the subject remained relatively static in a sitting position. The second consisted of a more dynamic environment, where the subject walked around a room as seen in Figure~\ref{fig:floorplan}. 
+
+A set of captured RSSI tables (as seen in Table~\ref{tab:rssi}) were fed into the simulation, which proceeded to run the routing algorithm. The simulation produced energy use data, along with power settings, and routes taken for all devices.
+
+\section{Hardware Implementation}\label{sec:hardware}
+In order to verify the new cost function in a real environment, a hardware platform was developed and used. The system function in a similar fashion to the simulation, except that the actual routing and power control data was fed back to the ED's.
+
 \subsection{Hardware Platform}
 The hardware platform used for this test consists of the Texas Instruments (TI) EZ430-RF2500. This device includes both an MSP430F2274 microcontroller along with a CC2500 2.4GHz transceiver. The CC2500 is configured to run at 250kbps.
 A single device, labeled the Access Point (AP), is connected via a USB to Serial link, running at 115200 BAUD, to the host computer. All other devices, labeled End Devices (EDs), are battery powered. In this implementation, the AP acts only as a bridge between the host and the end devices. All routing and power control calculations are done on the host.
 
 The host is a laptop computer with an Intel(R) Core(TM) i5-2410M CPU and 4GB of RAM. Eight EDs were placed on a 170cm, 70kg male subject as shown in Figure~\ref{fig:body}. The host was carried on a backpack and connected to the AP via a USB cable. The data was sampled, and the routing algorithm was run, at a rate of 5Hz. This sampling rate is appropriate as long as the subject, or its environment, does not move faster than this.$\ll$What was the name for this?$\gg$ If data needs to be sampled at a faster rate, some hardware and firmware changes might be necessary, but the host software will still work.
 
-Two experimental setups were used. For the first, the subject remained relatively static in a sitting position. The second consisted of a more dynamic environment, where the subject walked around a room as seen in Figure~\ref{fig:floorplan}. The target RSSI ($RSSI^T$) was arbitrarily chosen to be $-60 dBm$.
+For both simulation and hardware experiments, the target RSSI ($RSSI^T$) was arbitrarily chosen to be $-60 dBm$.
 
 \begin{figure}[!htb]
 \begin{center}
@@ -88,24 +143,44 @@ Two experimental setups were used. For the first, the subject remained relativel
 \label{fig:floorplan}
 \end{figure}
 
-\subsection{Cycle of Operations}
+\subsection{Cycle of Operations}\label{subsec:cycleofoperations}
 A normal cycle of operations with $n$ devices works as follows:
-\begin{enumerate}
-\item AP sends synchronization beacon which includes routing and power control tables.
-\item Each ED transmits its own RSSI table back to the AP, while simultaneously listening to other ED messages and storing the received power from each.
-\item Once all EDs have transmitted their data, the AP sends a table with the RSSI data from all devices. (See Table~\ref{tab:rssi} in Appendix~\ref{appendix:tables} for an example)
-\item The host uses the RSSI table to compute the routes along with the required powers to meet the selected links.
-\item The host sends both routing and power tables back to the AP so that a new cycle may begin.
-\end{enumerate}
+
+\begin{algorithmic}[1]
+\STATE AP sends synchronization beacon which includes routing and power control tables.
+\STATE Each ED transmits its own RSSI table back to the AP, while simultaneously listening to other ED messages and storing the received power from each.
+\STATE Once all EDs have transmitted their data, the AP sends a table with the RSSI data from all devices. (See Table~\ref{tab:rssi} for an example)
+\STATE The host uses the RSSI table to compute the routes along with the required powers to meet the selected links.
+\STATE The host sends both routing and power tables back to the AP so that a new cycle may begin.
+\end{algorithmic}
+
+\begin{table}[htb]
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
+\hline  & AP & ED1 & ED2 & ED3 & ED4 & ED5 & ED6 & ED7 & ED8 \\ 
+\hline AP & - & -60 & -60 & -60 & -60.5 & -60.5 & -60.5 & -60 & -79.5 \\ 
+\hline ED1 & -66 & - & -62 & -75 & -63.5 & -69 & -75.5 & -73 & -67.5 \\ 
+\hline ED2 & -72 & -61.5 & - & -80 & -69 & -70 & -74 & -75 & -66 \\ 
+\hline ED3 & -77.5 & -74.5 & -80.5 & - & -67.5 & -70 & -72.5 & -70.5 & -70 \\ 
+\hline ED4 & -39 & -63 & -69.5 & -67 & - & -82.5 & -74.5 & -69 & -65.5 \\ 
+\hline ED5 & -67.5 & -68 & -71 & -69.5 & -84 & - & -55.5 & -51.5 & -62 \\ 
+\hline ED6 & -67 & -75 & -75 & -72.5 & -75 & -55.5 & - & -44.5 & -53 \\ 
+\hline ED7 & -46 & -70 & -77.5 & -70.5 & -69 & -50.5 & -45 & - & -51.5 \\ 
+\hline ED8 & -78 & -67.5 & -66.5 & -71 & -66 & -62 & -54 & -51.5 & - \\ 
+\hline 
+\end{tabular} 
+\caption{Sample RSSI Table}
+\label{tab:rssi}
+\end{table}
+
 
 \subsection{Details}
 To minimize the number of control packets from being transmitted, the EDs are not individually polled. The only control packet that is sent is the synchronization beacon, which also carries the routing and power tables. Once the EDs are synchronized, they transmit their data on a pre-defined schedule to avoid collisions. Each ED has a network ID ranging from 1 to $n$. The time between synchronization packets is divided into time-slots than are used by each ED. The time slot used depends on the network ID of each device. This removes the need to come up with time schedules during runtime.
 
 The routing table is a simple array which lists the destination for each ED packet. The ED does not need to know the entire route its packets will take, but only next device in the path. Similarly, the power table lists the transmit power setting each device needs to use. The size of these tables is directly proportional to the number of devices in the network.
 
-$\ll$describe change from simulation (RSSI from power controlled transmission, address benefits$\gg$
-
 \section{Results}
+
+Due to the similarities between the simulation and hardware implementation (they both use real RSSI data), the results were fairly similar. If fed with the same RSSI data, the algorithm will always produce the same results. The only difference with the hardware implementation is that the RSSI table is reduced due to power control. Since each ED only uses enough transmit power to reach a specific ED, others might not get the message. This was not a problem when the hardware experiment was run.
 
 \begin{figure}[!ht]
 \includegraphics[width=0.8\textwidth]{figures/sit1-c0.pdf}
@@ -145,89 +220,11 @@ A good example of the algorithm working was a result of hardware problems. Durin
 \label{fig:walk4-c100}
 \end{figure}
 
-
-$\ll$describe figure  3 and interpret results – network lifetime (like fig.8 in paper with Jeff)$\gg$ 
-
-$\ll$describe figure  4 and interpret results – energy per bit (like fig.9 in paper with Jeff)$\gg$ 
-
 \section{Conclusion}
-$\ll$at the end: different from abstract -  The abstract in past tense + concentrate on meaning of results$\gg$
-
-One improvement that can be done deals with the example from Figure~\ref{fig:walk4-c100}. While the failed ED was not part of the network, it was still taken into account when it came to link cost calculation. A better implementation would not include off-line devices in the calculation.
+After analyzing the results, the new link cost function successfully improves network lifetime. The new cost function outperformed the traditional one in trials dealing with a dynamic environment, where the subject was walking. When the subject was not moving, both link costs performed about the same. Note that, in this case, performance is with respect to network lifetime, and not overall power consumption.
+While the new link cost was successful, there is room for improvement. One improvement that can be done deals with the example from Figure~\ref{fig:walk4-c100}. While the failed ED was not part of the network, it was still taken into account when it came to link cost calculation. A better implementation would not include off-line devices in the calculation. A second modification would relate actual battery, or other power source, charge to the algorithm. This would allow for devices to join and leave the network while maintaining proper operation. It would also allow devices with different power sources to be included and used.
 
 \bibliography{sources/thesis.bib}{}
 \bibliographystyle{plain}
-
-\appendix
-\section{Algorithms}\label{appendix:algorithms}
-\begin{algorithm}[!ht]
-\caption{Dijkstra's Algorithm with new cost function}
-\label{alg:dijkstra}
-\begin{algorithmic}
-\FOR{$i = 1$ to \# of Nodes} 
-	\STATE $node_i.visited \leftarrow 0$
-	\STATE $node_i.distance \leftarrow \infty$
-	\STATE $node_i.previous \leftarrow node_i$
-\ENDFOR
-\STATE $node_{AP}.distance \leftarrow 0$
-\STATE $energy_{min} = min(node.energy)$
-\WHILE{unvisited nodes available}
-	\STATE $node_{source} \leftarrow $ node with smallest distance
-	\FOR{$i = 1$ to \# of Links}
-		\IF{$link_i.source = node_{source}$}
-			\STATE $node_{dest} \leftarrow link_i.destination$
-			\IF{$node_{dest}.visited = 0$}
-				\STATE $cost \leftarrow link_i.power * (1 + node_{dest}.energy/energy_{min} )^M/2$
-				\STATE $newdistance \leftarrow node_{source}.distance + cost$
-				\IF{$distance < node_{dest}.distance$} 
-				\STATE$node_{dest}.distance \leftarrow newdistance$
-				\STATE$node_{dest}.previous \leftarrow node_{source}$
-				\ENDIF
-			\ENDIF
-		\ENDIF
-	\ENDFOR
-	\STATE $node_{source}.visited \leftarrow 1$
-\ENDWHILE
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}[!ht]
-\caption{Energy Used Calculation}
-\label{alg:energyused}
-\begin{algorithmic}
-\FOR{$i = 1$ to \# of Nodes}
-	\STATE $node_{ptr} = node_i$
-	\IF{$node_{ptr}.previous = node_{ptr}$}
-		\STATE No path to $node_i$
-	\ELSE
-		\WHILE{$node_{ptr}.previous \neq node_{ptr}$}
-			\STATE $link_{ptr} \leftarrow $ link between $node_{ptr}$ and $node_{ptr}.previous$
-			\STATE $node_{ptr}.energy += link_{ptr}.power$
-			\STATE $node_{ptr} \leftarrow = node_{ptr}.previous$
-		\ENDWHILE
-	\ENDIF
-\ENDFOR
-\end{algorithmic}
-\end{algorithm}
-
-\section{Tables}\label{appendix:tables}
-\begin{table}[htb]
-\label{tab:rssi}
-\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
-\hline  & AP & ED1 & ED2 & ED3 & ED4 & ED5 & ED6 & ED7 & ED8 \\ 
-\hline AP & - & -60 & -60 & -60 & -60.5 & -60.5 & -60.5 & -60 & -79.5 \\ 
-\hline ED1 & -66 & - & -62 & -75 & -63.5 & -69 & -75.5 & -73 & -67.5 \\ 
-\hline ED2 & -72 & -61.5 & - & -80 & -69 & -70 & -74 & -75 & -66 \\ 
-\hline ED3 & -77.5 & -74.5 & -80.5 & - & -67.5 & -70 & -72.5 & -70.5 & -70 \\ 
-\hline ED4 & -39 & -63 & -69.5 & -67 & - & -82.5 & -74.5 & -69 & -65.5 \\ 
-\hline ED5 & -67.5 & -68 & -71 & -69.5 & -84 & - & -55.5 & -51.5 & -62 \\ 
-\hline ED6 & -67 & -75 & -75 & -72.5 & -75 & -55.5 & - & -44.5 & -53 \\ 
-\hline ED7 & -46 & -70 & -77.5 & -70.5 & -69 & -50.5 & -45 & - & -51.5 \\ 
-\hline ED8 & -78 & -67.5 & -66.5 & -71 & -66 & -62 & -54 & -51.5 & - \\ 
-\hline 
-\end{tabular} 
-\caption{Sample RSSI Table}
-\end{table}
-
 
 \end{document}
