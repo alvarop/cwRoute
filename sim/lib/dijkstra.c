@@ -364,7 +364,7 @@ uint8_t dijkstra( uint8_t source_id, energy_t c_factor )
       
           // Calculate the current cost of the link
           current_cost = 1 + 
-            pow( ( p_source_node->energy / current_minimum ), c_factor ) ;
+            pow( ( p_destination_node->energy / current_minimum ), c_factor ) ;
           
           // Normalize
           current_cost /= ( 2 );          
