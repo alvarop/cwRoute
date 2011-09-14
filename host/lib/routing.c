@@ -280,7 +280,7 @@ uint8_t parse_table_d ( energy_t p_rssi_table[][MAX_DEVICES+1],
         tx_power = dbm_to_watt( p_previous_powers[col_index + 1] );
       }
 
-      tx_power = dbm_to_watt( 1.5l ); // uncomment for no power control
+      //tx_power = dbm_to_watt( 1.5l ); // uncomment for no power control
 
       // Compute the minimum power required to meet this link with 'target_rssi'
       // alpha is the channel attenuation, that is received/transmitted power
