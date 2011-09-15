@@ -1,7 +1,8 @@
 \documentclass{article}
 \usepackage{graphicx}
 \begin{document}
-\title{Masters Thesis}
+\title{ (thesis title?)\\
+Masters Thesis}
 \author{Alvaro Prieto\\
 BS/MS Electrical Engineering\\
 \texttt{axp8664@rit.edu}}
@@ -18,16 +19,21 @@ BS/MS Electrical Engineering\\
 \end{abstract}
 
 \section{Summary of Contributions}
+The following is a list of contributions presented in this work.
 \begin{itemize}
-\item BSN Software Libraries
-\item wireless ECG platform
-\item New routing algorithm
+\item \textbf{Software platform for WBAN research.} - The software platform was developed using only free and open source software (FOSS) tools. Radio libraries for the TI CC430 device were ported over from TI provided code and libraries for the CC2500 radio were written from scratch. Other features include timer control for scheduling and time-stamping, serial communication, some digital I/O, and analog input. Included in the platform were limited software tools for data capture and visualization on a host computer.
+
+\item \textbf{Wireless ECG platform} - In order to test and demonstrate the WBAN platform, a wireless ECG system was implemented. The system included three wireless devices, an access point, and a host computer. Software for synchronized sampling was developed and tested successfully using the WBAN platform. Three ECG leads were sampled at 300Hz and displayed on a host computer in real-time.
+
+\item \textbf{Software platform for routing algorithm development} - In order to develop a novel routing algorithm, a platform to test and compare with others was developed. The application uses Dijkstra's algorithm for best path selection, and allows for the testing of various link-cost functions. Both simulation and real-time operation are supported. One unique feature is the generation of routing graphic generation for network visualization.
+
+\item \textbf{Specialized cost function for maximizing Body Area Network lifetime using global routing algorithms} - (Use abstract of paper here?)
 \end{itemize}
 % Include literature survey from other file
 \input{sources/literature_survey} %uncomment to include literature survey
 
 
-\section{Software Libraries}
+\section{Software Libraries}\label{sec:wbansoftwarelib}
 One of the primary contributions of this project consists of software libraries for working with WBANs. Due to the project requirements, a choice was made to use free and open source tools, as opposed to proprietary software. Because of this choice, most of the radio libraries had to be either ported or re-written from scratch. There were two main hardware devices that were targeted in these libraries. The first consisted of a CC430 device, which has a built in 915MHz radio. The second was an MSP430 with an external CC2500 2.4GHz radio.
 
 \subsection{Project History}
@@ -41,20 +47,16 @@ After Robble left, the work continued. The main goal of the project at the time 
 The decision to write all software libraries from scratch was not an easy one. Initially the SimpliciTI libraries were modified to try and meet the project needs, but this proved to be a complex task. Due to the simple nature of the planned WBAN, a much less complex approach could be used. The main application only required streaming data from various wireless sensors.$\ll$ Should I elaborate on the design constraints here? The number of devices is known, the time of transmission is known etc...$\gg$ This could be accomplished with a very minimal radio library.
 
 \subsection{CC430 Device}
-The first device used in this project was Provencher's initial hardware platform. Due to the limited quantities of that device, a new version of the hardware platform was developed. The new device removed all unused sensors from the board to minimize its footprint. It included a CC430 device with a 32.768Khz crystal oscillator for precise timekeeping. The analog-to-digital(A/D) ports were used to attach any needed sensors. 
+The first device used in this project was Provencher's initial hardware platform. Due to the limited quantities of that device, a new version of the hardware platform was developed. The new device removed all unused sensors from the board to minimize its footprint. It included a CC430 device with a 32.768Khz crystal oscillator for precise timekeeping. The analog-to-digital(A/D) ports were used to attach any needed sensors. The actual CC430 model used was the CC430x6137.
 
 Libraries were written for serial communication, visual indicators, analog measurements, time synchronization and radio communications. The serial communication was used to transmit data to the host computer, while the rest were used in the wireless ECG application.
 
 \subsection{MSP430-RF2500 Device}
-The second major hardware platform was the MSP430-RF2500. This device is manufactured by TI and sold as a development platform. The MSP430-RF2500 device consists of an MSP430 microcontroller and a CC2500 radio. There were several reasons why this device was used. The primary use for the MSP430-RF2500 was to develop the libraries to use the CC2500 radio. The next planned hardware platform for the project consisted of a CC430 with a CC2500. The previous software libraries would need to be expanded to include a second radio for communication.
+The second major hardware platform was the MSP430-RF2500. This device is manufactured by TI and sold as a development platform. The MSP430-RF2500 device consists of an MSP430F2274 microcontroller and a CC2500 radio. There were several reasons why this device was used. The primary use for the MSP430-RF2500 was to develop the libraries to use the CC2500 radio. The next planned hardware platform for the project consisted of a CC430 with a CC2500. The previous software libraries would need to be expanded to include a second radio for communication.
 
 Unlike the CC430, which has a radio core built in, the CC2500 is a standalone unit. In order to expedite the software development process, a working platform was needed. Software development new, untested, hardware is not a feasible option. Debugging both hardware and software simultaneously is not a good idea.
 
 The previously developed CC430 libraries were ported to work with the MSP430 microcontroller and expanded to use the CC2500 radio. Features of the new radio libraries include power control, addressing and channel switching.
-
-\section{Specialized Cost Function for Maximizing Body Area Networks Lifetime Using Global Routing Algorithms}
-$\ll$ Insert most of the paper here. $\gg$
-
 
 \section{Wireless ECG Application}\label{section:wirelessecg}
 \subsection{Description}
@@ -114,19 +116,45 @@ Figure~\ref{fig:system_schedule} shows a sample system schedule. The figure show
 
 Certain devices can further reduce power consumption by sampling without using the main processor. This works by using direct-memory access(\emph{DMA}) which allows the analog-to-digital converter(\emph{ADC}) to store measurements in memory without first going through the processor. Using this method, Figure~\ref{fig:system_schedule} accurately presents the time each \emph{ED} is powered on. Sampling with DMA has not been implemented in the current wireless ECG platform.
 
-\subsection{Host Interface}
-The primary focus of this project was to obtain synchronized samples from several wireless devices. A secondary, but important, goal was to display the data in real time. To speed up development, the live-plotting tool kst(http://kst-plot.kde.org/) was used. A application, written in C, communicated via a USB-to-Serial link with the AP and received all of the ED data. It then output the data to CSV files, which were then used as an input for kst. Figure~\ref{fig:heartbeats} shows an ECG lead wirelessly measured from a human subject.
-
 \begin{figure}[htb]
 \begin{center}
-\includegraphics[width=1\textwidth]{figures/heartbeats.pdf}
+\includegraphics[width=0.8\textwidth]{figures/heartbeats.pdf}
 \end{center}
 \caption{Sample Measurement from Single ECG Lead}
 \label{fig:heartbeats}
 \end{figure}
 
+\subsection{Host Interface}
+The primary focus of this project was to obtain synchronized samples from several wireless devices. A secondary, but important, goal was to display the data in real time. To speed up development, the live-plotting tool kst(http://kst-plot.kde.org/) was used. A application, written in C, communicated via a USB-to-Serial link with the AP and received all of the ED data. It then output the data to CSV files, which were then used as an input for kst. Figure~\ref{fig:heartbeats} shows an ECG lead wirelessly measured from a human subject.
+
+
+
+\section{Algorithm Development Platform}
+A platform for testing and analyzing new cost functions for global routing algorithms was developed in C. The platform allows for a network of nodes and links between the nodes to be created. It computes the best path from any node to a central source node. Finally, it produces various statistics, such as energy use, routing maps, and graphical visualizations.
+
+Initially, the goal of the platform was to test and compare routing with various link costs in an efficient manner. After a good link cost function was found, it would then be implemented in a microcontroller and used. This did not turn out to be the case. The first problem encountered dealt with the network structure used for testing. The program required a list of nodes and a list of links between the nodes, along with the link costs. Developing a simulated network and links that accurately represented a real network was unfeasible. The choice was then made to closely couple the hardware design and the simulator.
+
+The best way to come up with a network for simulation was to get all of the node and link information from a real network. The WBAN platform was then used to develop a system for measuring RSSI data between all nodes in a network. This system allowed for the capture of real network data, both nodes and links, that could later be used to run routing simulations. The new program auto-generated a list of nodes, links, and link costs from the previously-measured RSSI data. This new approach effectively removed the need to come up with special networks for testing. 
+
+In order to better understand how the new routing system performed, a series of output files were generated during simulation. The program was set up to account for the energy use of each node as it routed packets through the network. Visualizing the energy use was vital for the analysis of network lifetime. Other available data included the routing information itself, which allowed for the analysis of the routes as the algorithm runs. Finally, the program produced a graphical output.
+
+The graphical output began as a simple experiment to see a visual representation of the network. It was later expanded to generate graphs of the network, and all available connections, as the RSSI data was sampled. Due to the large number of links between all of the nodes, this graphic was not useful. The final implantation, which can be seen in Figure~\ref{fig:networkgraph1}, only displayed the links used in a specific round of routing. The link labels display the transmit power required by each node to meet the specific link.
+
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=0.6\textwidth]{figures/networkgraph1.pdf}
+\end{center}
+\caption{Sample Network Visualization}
+\label{fig:networkgraph1}
+\end{figure}
+
+\section{Specialized Cost Function for Maximizing Body Area Networks Lifetime Using Global Routing Algorithms}\label{sec:costfunction}
+$\ll$ Insert most of the paper here. $\gg$
+
 \section{Conclusion}
 ...
+
+In Chapter\ref{sec:wbansoftwarelib},
 
 \pagebreak
 
