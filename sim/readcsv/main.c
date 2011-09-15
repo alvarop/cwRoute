@@ -190,7 +190,7 @@ uint8_t read_power_line ( FILE* fp_powers, energy_t* power_line )
   char csv_line[INBUFSIZE];   // Buffer for reading a line in the file
   char *p_item;
   uint16_t item_index = 0;
-  printf("Reading power line\n");
+
   if ( NULL != fgets( csv_line, sizeof(csv_line), fp_powers ) )
   {
     p_item = strtok( csv_line, "," );
@@ -200,11 +200,11 @@ uint8_t read_power_line ( FILE* fp_powers, energy_t* power_line )
     
       // Convert string to RSSI value and store in rssi_line
       power_line[item_index] = (energy_t)strtod( p_item, NULL );
-      printf( "%g ", power_line[item_index] );
+      
       item_index++;
       
     }
-    printf("\n");
+   
     // Read table successfully
     return 1;
   }
@@ -223,13 +223,11 @@ uint8_t read_table ( FILE* fp_csv_file, energy_t p_rssi_table[][MAX_DEVICES+1] )
 {
   char csv_line[INBUFSIZE];   // Buffer for reading a line in the file
   uint16_t line_index = 0;
-  printf("Reading table\n");
   while( NULL != fgets( csv_line, sizeof(csv_line), fp_csv_file ) )
   {
     // Detect empty line
     if( csv_line[0] == '\n' )
     {
-      printf("Read table\n");
       // Read table successfully
       return 1;
     }
@@ -325,7 +323,8 @@ void *graph_thread()
       //system("neato -Tsvg -ograph.svg graph.gv");
       //system("dot -Tsvg -ograph.svg graph.gv");
       //sprintf( command, "neato -Tjpg -oimages/graph%04d.jpg images/graph.gv", file_number);
-      sprintf( command, "dot -Tjpg -Gsize=4,4! -Gratio=fill -oimages/graph%05d.jpg %s", frame, filename );
+      //sprintf( command, "dot -Tjpg -Gsize=4,4! -Gratio=fill -oimages/graph%05d.jpg %s", frame, filename );
+      sprintf( command, "dot -Tsvg -Gsize=5,5! -Gratio=fill -oimages/graph%05d.svg %s", frame, filename );
       system( command );
 
       // Animate with ffmpeg -r 10 -b 500000 -i graph%05d.jpg ./animation.mp4

@@ -513,8 +513,6 @@ void print_shortest_path( uint8_t node_id )
     print_node_name( p_node->id );
     while( p_node->p_previous != p_node )
     {
-      printf("-(%g)",
-              find_link( p_node->p_previous->id, p_node->id )->links_power);
       p_node = p_node->p_previous;
       printf("->");
       print_node_name( p_node->id );
