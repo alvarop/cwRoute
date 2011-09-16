@@ -1,13 +1,31 @@
 \documentclass{article}
+
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{graphicx}
+\usepackage{fullpage}
+\usepackage[top=1.25in, bottom=1.25in, left=1.5in, right=1.0in]{geometry}
+
+\usepackage{setspace}
+\doublespacing
+
+%\addtolength{\oddsidemargin}{0.5in}
+%\addtolength{\evensidemargin}{0.5in}
+%\addtolength{\topmargin}{0.25in}
+%\addtolength{\textwidth}{-0.5in}
+
+
 \begin{document}
 \title{Specialized Cost Function for Maximizing Body Area Network Lifetime Using Global Routing Algorithms\\
 Masters Thesis}
 \author{Alvaro Prieto\\
 BS/MS Electrical Engineering\\
+Electrical and Microelectronic Engineering Department\\
+Rochester Institute of Technology\\
+Rochester, NY\\
 \texttt{axp8664@rit.edu}}
+
+\thispagestyle{empty}
 \maketitle
 
 \pagebreak
@@ -20,9 +38,15 @@ BS/MS Electrical Engineering\\
 \section*{Abstract}
 Wireless Body Area Networks (WBANs) consist of several wireless sensors located around a human body. These sensors may measure several biological signals, movement, and temperature. Due to major improvements in power consumption and constantly shrinking devices, WBANs are becoming ubiquitous. As a side effect present because of the small form factor of these devices, the battery size is limited. While the sensors themselves may be extremely power efficient, all of the measured data must be transmitted over a much less efficient wireless link. One benefit of WBANs is that they rarely include more than a dozen wireless devices over a small area. This constraint allows for the use of routing techniques not suitable for larger wireless sensor networks(WSNs).
 
-This work primarily focuses on maximizing the lifetime of WBANs. It also includes a basic software framework for developing WBANs, a sample Wireless Electrocardiogram (ECG) application, and a simple link cost algorithm development platform.
+Presented in this work is a novel global routing algorithm link-cost function to maximize network lifetime in WBANs. Also included are a basic software framework for developing WBANs, a sample Wireless Electrocardiogram (ECG) application, and a simple link cost algorithm development platform.
 
-\section{Summary of Contributions}
+\pagebreak
+
+\listoffigures
+
+\pagebreak
+
+\section*{Summary of Contributions}
 The following is a list of contributions presented in this work.
 \begin{itemize}
 \item \textbf{Software platform for WBAN research.} - The software platform was developed using only free and open source software (FOSS) tools. Radio libraries for the Texas Instruments (TI) CC430 device were ported over from TI reference code, while libraries for the CC2500 radio were written from scratch. Other features include timer control for scheduling and time-stamping, serial communication, some digital I/O, and analog input. Included in the platform were limited software tools for data capture and visualization on a host computer.
@@ -32,6 +56,8 @@ The following is a list of contributions presented in this work.
 \item \textbf{Software platform for routing algorithm development} - In order to develop a novel routing algorithm, a platform to test and compare with others was developed. The application uses Dijkstra's algorithm for best path selection, and allows for the testing of various link-cost functions. Both simulation and real-time operation are supported. One unique feature is the generation of routing graphic generation for network visualization.
 
 \item \textbf{Specialized cost function for maximizing WBAN lifetime using global routing algorithms} - A novel routing algorithm is developed that focuses not on single devices, but the network as a whole. Current methods focus on maximizing individual device lifetime or minimizing the energy-per-bit. While those are generally good goals, certain systems require all devices functioning to be considered operational. Keeping that in mind, the proposed system maximizes the network lifetime by normalizing power use across the network. For the purpose of this paper, \textbf{network lifetime} is defined as the time it takes any single node to deplete its energy source. 
+
+\item \textbf{Publication} A. Prieto, G. R. Tsouri, "Efficient Global Routing Algorithm for Prolonging Network Lifetime in Body Area Networks", in preparation IEEE Wireless Communication Letters.
 
 \end{itemize}
 % Include literature survey from other file
@@ -364,7 +390,9 @@ Due to the similarities between the simulation and hardware implementation (they
 
 Figures~\ref{fig:sit1-c0}~and~\ref{fig:sit1-c100} show the resulting accumulated energies while the subject was in a sitting position. The experiment was run with both an $M=0$ as a reference, and $M=100$. Unfortunately, the results with a static subject were rather neutral. All EDs consume energy at different rates for both $M=0$ and $M=100$. A possible explanation for this is that the links between EDs remain close to the same as time passes. This can become a problem because certain EDs may only have a single path to choose from. If this is the case, they have no choice but to use the same link continuously. Not having a choice of paths impairs the ability of the routing algorithm to distribute energy use among all devices.
 
-Figures~\ref{fig:walk2-c0}~and~\ref{fig:walk2-c100}, on the other hand, show an increase in network lifetime. For example, at the end of the 5 minute sampling run with $M=0$, the device which consumed the most power was ED7 with approximately 1.7 mW. On the other hand, with $M=100$, all EDs consume power in a uniform fashion and end up with less than 1.3 mW each. One important observation is that the network with $M=0$ consumed less overall power (~9.6mW) than the one with $M=100$ (~10.1mW). This is expected, due to the fact that the new cost function specifically avoids the most efficient path for a specific node in favor of the most efficient path for the whole network. While more energy is consumed overall, no single ED consumes significantly more power. 
+Figures~\ref{fig:walk2-c0}~and~\ref{fig:walk2-c100}, on the other hand, show an increase in network lifetime. For example, at the end of the 5 minute sampling run with $M=0$, the device which consumed the most power was ED7 with approximately 1.7 mW. On the other hand, with $M=100$, all EDs consume power in a uniform fashion and end up with less than 1.3 mW each. One important observation is that the network with $M=0$ consumed less overall power (~9.6mW) than the one with $M=100$ (~10.1mW). This is expected, due to the fact that the new cost function specifically avoids the most efficient path for a specific node in favor of the most efficient path for the whole network. While more energy is consumed overall, no single ED consumes much more power than others. 
+
+Another way of interpreting these results is that energy use in the network is more efficient. When a single ED depletes its energy source using the traditional link cost, there is a significant amount of energy left unused in the network. At the same time, when an ED dies in a network using the new link cost, there should be much less energy left in the rest of the network.
 
 To demonstrate the network lifetime improvement, an ED will be considered have depleted it's power source after consuming 1mW of normalized energy. In the previous example, the trial with $M=0$ reaches 1mW after approximately 175 seconds, while the case with $M=100$ reaches it around 240 seconds.
 
@@ -389,9 +417,9 @@ A good example of the algorithm working was a result of hardware problems. Durin
 \end{figure}
 
 \section{Conclusion}
-The developed WBAN software libraries were successfully used to implement both the wireless ECG system and the full-body routing system. The wireless ECG system was able to sample data at a rate of 300Hz and display it in the host computer. The routing algorithm testing platform facilitated the development of the new link cost function to maximize network lifetime.
+The developed WBAN software libraries were successfully used to implement both the wireless ECG system and the full-body routing system. The wireless ECG system was able to sample data at a rate of 300Hz and display in real-time through the host computer. The routing algorithm testing platform facilitated the development of the new link cost function to maximize network lifetime.
 
-After analyzing the results, the new link cost function successfully improves network lifetime. The new cost function outperformed the traditional one in trials dealing with a dynamic environment, where the subject was walking. When the subject was not moving, both link costs performed about the same. Note that, in this case, performance is defined with respect to network lifetime, and not overall power consumption.
+After analyzing the results, the new link cost function successfully improved network lifetime. The new cost function outperformed the traditional one in trials dealing with a dynamic environment, where the subject was walking. When the subject was not moving, both link costs performed about the same. Note that, in this case, performance is defined with respect to network lifetime, and not overall power consumption.
 
 While the new link cost was successful, there is room for improvement. One improvement that can be done deals with the example from Figure~\ref{fig:walk4-c100}. While the failed ED was not part of the network, it was still taken into account when it came to link cost calculation. A better implementation would not include off-line devices in the calculation. A second modification would relate actual battery, or other power source, charge to the algorithm. This would allow for devices to join and leave the network while maintaining proper operation. It would also allow devices with different power sources to be included and used.
 
@@ -399,10 +427,6 @@ The use of power control, coupled with this new link cost function, should allow
 
 
 \pagebreak
-
-\listoffigures
-
-%\listoftables
 
 \bibliography{sources/thesis.bib}{}
 \bibliographystyle{plain}
