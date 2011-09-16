@@ -9,27 +9,24 @@
 \usepackage{setspace}
 \doublespacing
 
-%\addtolength{\oddsidemargin}{0.5in}
-%\addtolength{\evensidemargin}{0.5in}
-%\addtolength{\topmargin}{0.25in}
-%\addtolength{\textwidth}{-0.5in}
-
+\usepackage{hyperref}
 
 \begin{document}
-\title{Specialized Cost Function for Maximizing Body Area Network Lifetime Using Global Routing Algorithms\\
-Masters Thesis}
+\title{Body Area Network Platform Utilizing Energy-Efficient Routing of Physiological Data}
 \author{Alvaro Prieto\\
+Masters Thesis\\
 BS/MS Electrical Engineering\\
 Electrical and Microelectronic Engineering Department\\
 Rochester Institute of Technology\\
 Rochester, NY\\
 \texttt{axp8664@rit.edu}}
 
-\thispagestyle{empty}
 \maketitle
+\thispagestyle{empty}
 
 \pagebreak
 
+\addcontentsline{toc}{section}{\protect\numberline{}Table of Contents}
 \tableofcontents
 
 \pagebreak
@@ -42,6 +39,7 @@ Presented in this work is a novel global routing algorithm link-cost function to
 
 \pagebreak
 
+\addcontentsline{toc}{section}{\protect\numberline{}List of Figures}
 \listoffigures
 
 \pagebreak
@@ -188,7 +186,7 @@ In order to better understand how the new routing system performed, a series of 
 \label{fig:networkgraph1}
 \end{figure}
 
-Finally, the program produced a graphical output. The graphical output began as a simple experiment to see a visual representation of the network. It was later expanded to generate graphs of the network, and all available connections, as the RSSI data was sampled. Due to the large number of links between all of the nodes, this graphic was not useful. The final implementation, which can be seen in Figure~\ref{fig:networkgraph1}, only displayed the links used in a specific round of routing. The link labels display the transmit power required by each node to meet the specific link. The generated graphs can later be put together to form an animation that shows the network changing in action.
+Finally, the program produced a graphical output. The graphical output began as a simple experiment to see a visual representation of the network. It was later expanded to generate graphs of the network, and all available connections, as the RSSI data was sampled. Due to the large number of links between all of the nodes, this graphic was not useful. The final implementation, which can be seen in Figure~\ref{fig:networkgraph1}, only displayed the links used in a specific round of routing. The link labels display the transmit power required by each node to meet the specific link. The generated graphs can later be put together to form an animation that shows the network changing in action. A sample video of the generated routing animation can be seen in \url{http://www.youtube.com/watch?v=5Mpn-_FFJaw&hd=1}.
 
 \begin{figure}[htb]
 \begin{center}
@@ -376,13 +374,13 @@ The routing table is a simple array which lists the destination for each ED pack
 
 Due to the similarities between the simulation and hardware implementation (they both use real RSSI data), the results were fairly similar. If fed with the same RSSI data, the algorithm will always produce the same results. The only difference with the hardware implementation is that the RSSI table is reduced due to the use of power control. Since each ED only uses enough transmit power to reach a specific ED, others might not receive the message. This was not a problem when the hardware experiment was run.
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \includegraphics[width=0.8\textwidth]{figures/sit1-c0.pdf}
 \caption{Sitting M=0}
 \label{fig:sit1-c0}
 \end{figure}
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \includegraphics[width=0.8\textwidth]{figures/sit1-c100.pdf}
 \caption{Sitting M=100}
 \label{fig:sit1-c100}
@@ -396,13 +394,13 @@ Another way of interpreting these results is that energy use in the network is m
 
 To demonstrate the network lifetime improvement, an ED will be considered have depleted it's power source after consuming 1mW of normalized energy. In the previous example, the trial with $M=0$ reaches 1mW after approximately 175 seconds, while the case with $M=100$ reaches it around 240 seconds.
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \includegraphics[width=0.8\textwidth]{figures/walk2-c0.pdf}
 \caption{Walking M=0}
 \label{fig:walk2-c0}
 \end{figure}
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \includegraphics[width=0.8\textwidth]{figures/walk2-c100.pdf}
 \caption{Walking M=100}
 \label{fig:walk2-c100}
@@ -424,9 +422,6 @@ After analyzing the results, the new link cost function successfully improved ne
 While the new link cost was successful, there is room for improvement. One improvement that can be done deals with the example from Figure~\ref{fig:walk4-c100}. While the failed ED was not part of the network, it was still taken into account when it came to link cost calculation. A better implementation would not include off-line devices in the calculation. A second modification would relate actual battery, or other power source, charge to the algorithm. This would allow for devices to join and leave the network while maintaining proper operation. It would also allow devices with different power sources to be included and used.
 
 The use of power control, coupled with this new link cost function, should allow WBANs to run efficiently for long periods of time, while maximizing the network lifetime. Networks requiring all devices to be on-line to function will greatly benefit from this routing method. Other networks can also benefit. Due to the normalization of energy use in the network, devices will deplete their energy sources at similar times. This could be beneficial as all devices can be recharged or replaced simultaneously, instead of constantly monitoring and replacing individual devices.
-
-
-\pagebreak
 
 \bibliography{sources/thesis.bib}{}
 \bibliographystyle{plain}
