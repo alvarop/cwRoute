@@ -12,13 +12,25 @@
 \usepackage{hyperref}
 
 \begin{document}
-\title{Body Area Network Platform Utilizing Energy-Efficient Routing of Physiological Data}
-\author{Alvaro Prieto\\
-Masters Thesis\\
-BS/MS Electrical Engineering\\
+\title{Wireless Body Area Network Platform Utilizing Energy-Efficient Routing of Physiological Data}
+\author{by\\
+Alvaro Prieto\\
+Master of Science Thesis\\
+in\\
+Electrical Engineering\\
+Approved by:\\
+\makebox[3.5in]{\hrulefill}\\
+(Gill Tsouri, Ph. D.)\\
+\makebox[3.5in]{\hrulefill}\\
+(Andres Kwasinski, Ph. D.)\\
+\makebox[3.5in]{\hrulefill}\\
+(Nirmala Shenoy, Ph. D.)\\
+\makebox[3.5in]{\hrulefill}\\
+(Sohail A. Dianat, Ph. D.)\\
 Electrical and Microelectronic Engineering Department\\
+Kate Gleason College of Engineering\\
 Rochester Institute of Technology\\
-Rochester, NY\\
+Rochester, New York\\
 \texttt{axp8664@rit.edu}}
 
 \maketitle
@@ -73,7 +85,7 @@ Jeffery Robble, another student, took over and ported most of the code to use Li
 After Robble left, the work continued. The main goal of the project at the time was to develop wireless electrocardiogram(ECG)(Section~\ref{section:wirelessecg}). While planning for the wireless ECG, a decision was made to develop an entire WBAN platform that could later be used for other projects. The new platform would be developed in-house and included both hardware and software. Because of this, the entire library was to be written from the ground up. This would prevent any rights issues from coming up if published.
 
 \subsection{Design Choices}
-The decision to write all software libraries from scratch was not an easy one. Initially the SimpliciTI libraries were modified to try and meet the project needs, but this proved to be a complex task. Due to the simple nature of the planned WBAN, a much less complex approach could be used. The main application only required streaming data from various wireless sensors.$\ll$ Should I elaborate on the design constraints here? The number of devices is known, the time of transmission is known etc...$\gg$ This could be accomplished with a very minimal radio library.
+The decision to write all software libraries from scratch was not an easy one. Initially the SimpliciTI libraries were modified to try and meet the project needs, but this proved to be a complex task. Due to the simple nature of the planned WBAN, a much less complex approach could be used. The main application only required streaming data from various wireless sensors. This could be accomplished with a very minimal radio library.
 
 \subsection{CC430 Device}
 The first device used in this project was Provencher's initial hardware platform. Due to the limited quantities of that device, a new version of the hardware platform was developed. The new device removed all unused sensors from the board to minimize its footprint. It included a CC430 device with a 32.768Khz crystal oscillator for precise timekeeping. The analog-to-digital(A/D) ports were used to attach any needed sensors. The actual CC430 model used was the CC430x6137.
@@ -314,7 +326,7 @@ In order to verify the new cost function in a real environment, a hardware platf
 The hardware platform used for this test consists of the Texas Instruments (TI) EZ430-RF2500. This device includes both an MSP430F2274 microcontroller along with a CC2500 2.4GHz transceiver. The CC2500 is configured to run at 250kbps.
 A single device, labeled the Access Point (AP), is connected via a USB to Serial link, running at 115200 BAUD, to the host computer. All other devices, labeled End Devices (EDs), are battery powered. In this implementation, the AP acts only as a bridge between the host and the end devices. All routing and power control calculations are done on the host.
 
-The host is a laptop computer with an Intel(R) Core(TM) i5-2410M CPU and 4GB of RAM. Eight EDs were placed on a 170cm, 70kg male subject as shown in Figure~\ref{fig:body}. The host was carried on a backpack and connected to the AP via a USB cable. The data was sampled, and the routing algorithm was run, at a rate of 5Hz. This sampling rate is appropriate as long as the subject, or its environment, does not move faster than this.$\ll$What was the name for this?$\gg$ If data needs to be sampled at a faster rate, some hardware and firmware changes might be necessary, but the host software will still work.
+The host is a laptop computer with an Intel(R) Core(TM) i5-2410M CPU and 4GB of RAM. Eight EDs were placed on a 170cm, 70kg male subject as shown in Figure~\ref{fig:body}. The host was carried on a backpack and connected to the AP via a USB cable. The data was sampled, and the routing algorithm was run, at a rate of 5Hz. This sampling rate is appropriate as long as the subject, or its environment, does not move faster than this. If data needs to be sampled at a faster rate, some hardware and firmware changes might be necessary, but the host software will still work.
 
 For both simulation and hardware experiments, the target RSSI ($RSSI^T$) was arbitrarily chosen to be $-60 dBm$.
 
@@ -338,6 +350,8 @@ A normal cycle of operations with $n$ devices works as follows:
 \end{algorithmic}
 
 \begin{table}[htb]
+\begin{center}
+
 \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
 \hline  & AP & ED1 & ED2 & ED3 & ED4 & ED5 & ED6 & ED7 & ED8 \\ 
 \hline AP & - & -60 & -60 & -60 & -60.5 & -60.5 & -60.5 & -60 & -79.5 \\ 
@@ -353,7 +367,9 @@ A normal cycle of operations with $n$ devices works as follows:
 \end{tabular} 
 \caption{Sample RSSI Table}
 \label{tab:rssi}
+\end{center}
 \end{table}
+
 
 
 \subsubsection{Details}
@@ -375,43 +391,53 @@ The routing table is a simple array which lists the destination for each ED pack
 Due to the similarities between the simulation and hardware implementation (they both use real RSSI data), the results were fairly similar. If fed with the same RSSI data, the algorithm will always produce the same results. The only difference with the hardware implementation is that the RSSI table is reduced due to the use of power control. Since each ED only uses enough transmit power to reach a specific ED, others might not receive the message. This was not a problem when the hardware experiment was run.
 
 \begin{figure}[!htb]
-\includegraphics[width=0.8\textwidth]{figures/sit1-c0.pdf}
+\begin{center}
+\includegraphics[width=0.75\textwidth]{figures/sit1-c0.pdf}
 \caption{Sitting M=0}
 \label{fig:sit1-c0}
+\end{center}
 \end{figure}
 
 \begin{figure}[!htb]
-\includegraphics[width=0.8\textwidth]{figures/sit1-c100.pdf}
+\begin{center}
+\includegraphics[width=0.75\textwidth]{figures/sit1-c100.pdf}
 \caption{Sitting M=100}
 \label{fig:sit1-c100}
+\end{center}
 \end{figure}
 
 Figures~\ref{fig:sit1-c0}~and~\ref{fig:sit1-c100} show the resulting accumulated energies while the subject was in a sitting position. The experiment was run with both an $M=0$ as a reference, and $M=100$. Unfortunately, the results with a static subject were rather neutral. All EDs consume energy at different rates for both $M=0$ and $M=100$. A possible explanation for this is that the links between EDs remain close to the same as time passes. This can become a problem because certain EDs may only have a single path to choose from. If this is the case, they have no choice but to use the same link continuously. Not having a choice of paths impairs the ability of the routing algorithm to distribute energy use among all devices.
 
-Figures~\ref{fig:walk2-c0}~and~\ref{fig:walk2-c100}, on the other hand, show an increase in network lifetime. For example, at the end of the 5 minute sampling run with $M=0$, the device which consumed the most power was ED7 with approximately 1.7 mW. On the other hand, with $M=100$, all EDs consume power in a uniform fashion and end up with less than 1.3 mW each. One important observation is that the network with $M=0$ consumed less overall power (~9.6mW) than the one with $M=100$ (~10.1mW). This is expected, due to the fact that the new cost function specifically avoids the most efficient path for a specific node in favor of the most efficient path for the whole network. While more energy is consumed overall, no single ED consumes much more power than others. 
+Figures~\ref{fig:walk2-c0}~and~\ref{fig:walk2-c100}, on the other hand, show an increase in network lifetime. For example, at the end of the 5 minute sampling run with $M=0$, the device which consumed the most power was ED7 with approximately 1.06 $\mu$J. On the other hand, with $M=100$, all EDs consume power in a uniform fashion and end up with less than 0.81 $\mu$J each. One important observation is that the network with $M=0$ consumed less overall power (~6 $\mu$J) than the one with $M=100$ (~6.31$\mu$J). This is expected, due to the fact that the new cost function specifically avoids the most efficient path for a specific node in favor of the most efficient path for the whole network. While more energy is consumed overall, no single ED consumes much more power than others. 
 
 Another way of interpreting these results is that energy use in the network is more efficient. When a single ED depletes its energy source using the traditional link cost, there is a significant amount of energy left unused in the network. At the same time, when an ED dies in a network using the new link cost, there should be much less energy left in the rest of the network.
 
-To demonstrate the network lifetime improvement, an ED will be considered have depleted it's power source after consuming 1mW of normalized energy. In the previous example, the trial with $M=0$ reaches 1mW after approximately 175 seconds, while the case with $M=100$ reaches it around 240 seconds.
+To demonstrate the network lifetime improvement, an ED will be considered have depleted it's power source after consuming 0.625 $\mu$J of energy. In the previous example, the trial with $M=0$ reaches 0.625 $\mu$J after approximately 175 seconds, while the case with $M=100$ reaches it around 240 seconds.
 
 \begin{figure}[!htb]
-\includegraphics[width=0.8\textwidth]{figures/walk2-c0.pdf}
+\begin{center}
+\includegraphics[width=0.75\textwidth]{figures/walk2-c0.pdf}
 \caption{Walking M=0}
 \label{fig:walk2-c0}
+\end{center}
 \end{figure}
 
 \begin{figure}[!htb]
-\includegraphics[width=0.8\textwidth]{figures/walk2-c100.pdf}
+\begin{center}
+\includegraphics[width=0.75\textwidth]{figures/walk2-c100.pdf}
 \caption{Walking M=100}
 \label{fig:walk2-c100}
+\end{center}
 \end{figure}
 
 A good example of the algorithm working was a result of hardware problems. During of the experiments, a single ED went off-line for several seconds and was manually restarted. Figure~\ref{fig:walk4-c100} shows the effect the ED failure had on the network. Because a device that is powered off does not consume power, it became the one with the least energy used. When it returned to the network, it was immediately used as a relay by other nodes.
 
 \begin{figure}[!ht]
-\includegraphics[width=0.8\textwidth]{figures/walk4-c100.pdf}
+\begin{center}
+\includegraphics[width=0.75\textwidth]{figures/walk4-c100.pdf}
 \caption{Walking M=100}
 \label{fig:walk4-c100}
+\end{center}
 \end{figure}
 
 \section{Conclusion}

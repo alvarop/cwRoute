@@ -50,7 +50,7 @@ int main( int argc, char *argv[] )
   // Make sure input is correct
   if( argc < 6 )
   {
-    printf("Usage: %s port baudrate C(0.0-1.0) [graph (0,1)] timeout\n", 
+    printf("Usage: %s port baudrate C(0.0-1000.0) [graph (0,1)] timeout\n", 
                                                                       argv[0]);
     return 0;
   }
@@ -68,8 +68,9 @@ int main( int argc, char *argv[] )
   printf("Data collection will start in ~%d seconds...\n", timeout);
 
   sleep(timeout);
+#ifdef ENABLE_MUSIC  
   system("banshee --play");
-
+#endif
   // Initialize routing an power tables
   memset( (uint8_t*)power_table, 0xff, MAX_DEVICES );
   memset( (uint8_t*)routing_table, ( MAX_DEVICES + 1 ), MAX_DEVICES );
@@ -281,9 +282,11 @@ void sigint_handler( int32_t sig )
 
     // Close the serial port
     serial_close();
-    
+
+#ifdef ENABLE_MUSIC    
     // Stop playing music
     system("banshee --pause");
+#endif
     
     printf("\nExiting...\n");
     exit(sig);
